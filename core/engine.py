@@ -7,7 +7,13 @@ class PlaybackEngine:
         mixer.init()
         
         self.playlist = []
+        self.queue = []
         self.current_index = 0
+
+        self.active_track = None
+        self.playing_from_queue = False
+        self.queue_head_removed = False
+
         self.is_playing = False
         self.is_paused = False
         self.position_offset = 0.0
@@ -20,24 +26,32 @@ class PlaybackEngine:
 
     @property
     def current_track(self):
-        """Returns the dictionary data of the currently active track."""
-        if self.playlist and 0 <= self.current_index < len(self.playlist):
-            return self.playlist[self.current_index]
-        return None
+        """Returns the dictionary data of the currently loaded track."""
+        return self.active_track
 
-    def load_track(self):
-        """Loads the current track file into the mixer without playing it yet."""
-        track = self.current_track
-        if track and os.path.exists(track["path"]):
-            mixer.music.load(track["path"])
+    def load_track(self, track=None):
+        """
+        Loads the a track file into the mixer without playing it yet.
+        If a track argument is not provided, load the track at the current index in the playlist.
+        """
+        if track is not None:
+            self.active_track = track
+        else:
+            if self.playlist and 0 <= self.current_index < len(self.playlist):
+                self.active_track = self.playlist[self.current_index]
+            else:
+                self.active_track = None
+
+        if self.active_track and os.path.exists(self.active_track["path"]):
+            mixer.music.load(self.active_track["path"])
             self.position_offset = 0.0
             self.is_paused = False
-            return track
+            return self.active_track
         return None
 
     def toggle_play(self):
         """Toggles play/pause states. Returns True if playing, False if paused."""
-        if not self.playlist:
+        if not self.active_track:
             return False
 
         if not self.is_playing:
@@ -58,8 +72,22 @@ class PlaybackEngine:
         return self.is_playing
 
     def next_track(self):
-        """Cycles to the next index and plays it."""
-        if self.playlist:
+        """Cycles forward. Automatically checks from the queue first."""
+        if self.playing_from_queue and self.queue:
+            if not self.queue_head_removed:
+                self.queue.pop(0)
+            self.playing_from_queue = False
+            self.queue_head_removed = False
+
+        if self.queue:
+            # Pull the new first item off the top of the queue
+            next_up = self.queue[0]
+            self.playing_from_queue = True
+            self.is_playing = False
+            self.load_track(track=next_up)
+            self.toggle_play()
+        elif self.playlist:
+            # Standard playlist progression loop
             self.current_index = (self.current_index + 1) % len(self.playlist)
             self.is_playing = False
             self.load_track()

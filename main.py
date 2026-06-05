@@ -7,6 +7,7 @@ import mutagen
 import io
 from PIL import Image
 import core
+import ui
 
 # Initialize the audio mixer
 mixer.init()
@@ -21,182 +22,6 @@ BLACK = "#000000"
 BLUE = "#1a6faf"
 HOVER_BLUE = "#145a86"
 
-class PlaylistRow(ctk.CTkFrame):
-    def __init__(self, master, index, title, artist, click_callback, options_callback):
-        super().__init__(
-            master,
-            fg_color="transparent",
-            height=48,
-            corner_radius=6
-        )
-        self.pack_propagate(False)
-        
-        self.index = index
-        self.click_callback = click_callback
-        self.options_callback = options_callback
-
-        self.index_label = ctk.CTkLabel(self, text=f"{index + 1}", font=("Arial", 13), text_color=VERY_LIGHT_GRAY, width=10, anchor="w")
-        self.index_label.pack(side="left", padx=(10, 0))
-
-        # Truncate title and artist names if they exceed character limits
-        truncated_title = core.truncate_text(title, max_chars=40)
-        truncated_artist = core.truncate_text(artist, max_chars=40)
-        
-        display_text = f"{truncated_title}\n{truncated_artist}".strip()
-
-        # Setup the text label
-        self.label = ctk.CTkLabel(
-            self,
-            text=display_text,
-            font=("Arial", 13),
-            text_color=WHITE,
-            anchor="w",
-            justify="left"
-        )
-        # fill="both" and expand=True ensures the invisible text bounding box spans the remaining width, keeping the entire left side clickable
-        self.label.pack(side="left", fill="both", expand=True, padx=(10, 0))
-
-        # Options button
-        self.btn_options = ctk.CTkButton(
-            self,
-            text="•••",
-            width=30,
-            height=30,
-            fg_color="transparent",
-            text_color=WHITE,
-            font=("Arial", 12, "bold"),
-            command=self.show_options_menu
-        )
-        self.btn_options.pack(side="right", padx=(0, 5))
-
-        # Bind mouse interactions to the row container, index and text labels
-        for widget in (self, self.index_label, self.label):
-            widget.bind("<Enter>", self.on_hover)
-            widget.bind("<Leave>", self.on_leave)
-            widget.bind("<Button-1>", self.on_click)
-            widget.bind("<Button-3>", self.show_options_menu)
-
-        self.btn_options.bind("<Enter>", self.on_options_hover)
-        self.btn_options.bind("<Leave>", self.on_options_leave)
-
-        self.is_active_song = False
-
-    def set_active(self, is_active):
-        """Changes the row's styling depending on if it's the currently playing track."""
-        self.is_active_song = is_active
-        if is_active:
-            self.configure(fg_color=BLUE)
-            self.index_label.configure(text_color=WHITE)
-            self.label.configure(text_color=WHITE)
-            self.btn_options.configure(hover_color=HOVER_BLUE)
-        else:
-            self.configure(fg_color="transparent")
-            self.index_label.configure(text_color=VERY_LIGHT_GRAY)
-            self.label.configure(text_color=WHITE)
-            self.btn_options.configure(hover_color=DARK_GRAY)
-
-    def on_hover(self, event):
-        """Highlight the background row when the cursor is over it."""
-        if not self.is_active_song:
-            self.configure(fg_color=LIGHT_GRAY)
-            self.index_label.configure(text=f"▶")
-
-    def on_leave(self, event):
-        """Remove background highlight when cursor moves away."""
-        if not self.is_active_song:
-            self.configure(fg_color="transparent")
-            self.index_label.configure(text=f"{self.index + 1}")
-    
-    def on_options_hover(self, event):
-        """Change the options button color on hover."""
-        if not self.is_active_song:
-            self.configure(fg_color=LIGHT_GRAY)
-            self.btn_options.configure(fg_color=GRAY)
-        else:
-            self.btn_options.configure(fg_color=HOVER_BLUE)
-
-    def on_options_leave(self, event):
-        """Remove background highlight when cursor moves away."""
-        self.btn_options.configure(fg_color="transparent")
-        if not self.is_active_song:
-            self.configure(fg_color="transparent")
-
-    def on_click(self, event):
-        """Call playlist selection logic."""
-        self.click_callback(self.index)
-        self.index_label.configure(text=f"{self.index + 1}")
-
-    def show_options_menu(self, event=None):
-        """Creates a borderless dropdown menu."""
-
-        # Create a top-level popup window
-        menu = ctk.CTkToplevel(self)
-        menu.withdraw() # Hide it instantly while configuring layout
-        menu.overrideredirect(True) # Completely kills the OS title bar and native borders
-
-        # Apply styling
-        menu.configure(fg_color=DARK_GRAY, corner_radius=6 )
-
-        # Dropdown options
-        options = [
-            ("Add to queue", core.TrackActions.ADD_TO_QUEUE),
-            ("Save to a playlist", core.TrackActions.SAVE_TO_PLAYLIST),
-            ("Open in folder", core.TrackActions.OPEN_IN_FOLDER)
-        ]
-
-        # Pack custom buttons as rows
-        for i, (label, action) in enumerate(options):
-            btn = ctk.CTkButton(menu, text=label, anchor="w",
-                fg_color="transparent", text_color=WHITE, hover_color=LIGHT_GRAY,
-                height=30, corner_radius=4, font=("Arial", 12),
-                command=lambda a=action: [menu.destroy(), self.handle_option(a)]
-            )
-            
-            # Determine vertical padding based on position (no padding for inner elements)
-            if i == 0:
-                row_pady = (2, 0)
-            elif i == len(options) - 1:
-                row_pady = (0, 2)
-            else:
-                row_pady = 0
-                
-            btn.pack(fill="x", padx=4, pady=row_pady)
-
-        # If triggered by right-click, use the mouse position for more intuitive context menu placement
-        # Otherwise, position the menu precisely right underneath the options icon button
-        if event is not None:
-            x = event.x_root
-            y = event.y_root + 10
-        else:
-            x = self.btn_options.winfo_rootx()
-            y = self.btn_options.winfo_rooty() + self.btn_options.winfo_height()
-
-        # Geometry
-        menu.geometry(f"160x{len(options) * 30 + 4}+{x}+{y}")
-        
-        # Smooth rendering and focus handling
-        menu.deiconify()
-        menu.attributes("-topmost", True)
-        
-        menu.after(10, menu.focus_set)
-
-        def safe_close(event):
-            # Only destroy if focus shifted to a completely different window instance
-            if event.widget == menu:
-                # Determine the widget which is focused, and if it lives in the menu, do not close yet
-                next_focus = menu.focus_get()
-                if next_focus and next_focus.master == menu:
-                    return
-                
-                # Use after_idle so any click commands on the menu buttons register before the window vanishes
-                menu.after_idle(lambda: menu.destroy() if menu.winfo_exists() else None)
-
-        menu.bind("<FocusOut>", safe_close)
-
-    def handle_option(self, action : core.TrackActions):
-        """Route the clicked option's event data."""
-        self.options_callback(self.index, action)
-
 class MusicPlayer(ctk.CTk):
     def __init__(self):
         super().__init__()
@@ -209,10 +34,15 @@ class MusicPlayer(ctk.CTk):
         # Initialize the new Pygame-based playback engine
         self.engine = core.PlaybackEngine()
 
-        # Local window parameters
+        # Playlist variables
         self.playlist = []
         self.playlist_buttons = []
         self.current_index = 0
+
+        # Queue variables
+        self.queue_buttons = []
+
+        # Slider variables
         self.is_dragging_slider = False
         self.was_playing_before_drag = False
 
@@ -224,15 +54,37 @@ class MusicPlayer(ctk.CTk):
     def setup_ui(self):
         """Set up the app UI."""
 
-        # Left Container (Takes up 60% width, 92% height to leave room for window margins)
-        self.playlist_frame = ctk.CTkScrollableFrame(self, label_text="Playlist", label_font=("Arial", 16, "bold"), fg_color=GRAY, label_fg_color=LIGHT_GRAY)
-        self.playlist_frame.place(relx=0.02, rely=0.04, relwidth=0.56, relheight=0.92)
+        # Left container (Takes up 60% width, 92% height)
+        self.left_panel = ctk.CTkFrame(self, fg_color="transparent")
+        self.left_panel.place(relx=0.02, rely=0.04, relwidth=0.56, relheight=0.92)
 
-        # Right Container (Takes up 40% width, 92% height)
+        # Visual Toggle Control (Approach A Visuals)
+        self.view_toggle = ctk.CTkSegmentedButton(
+            self.left_panel, 
+            values=["Playlist", "Queue"], 
+            command=self.switch_view,
+            selected_color=BLUE,
+            selected_hover_color=HOVER_BLUE,
+            fg_color=GRAY,
+            unselected_color=GRAY,
+            unselected_hover_color=LIGHT_GRAY,
+            font=("Arial", 14, "bold")
+        )
+        self.view_toggle.pack(fill="x", pady=(0, 10))
+        self.view_toggle.set("Playlist")
+
+        # Playlist view
+        self.playlist_frame = ctk.CTkScrollableFrame(self.left_panel, fg_color=GRAY)
+        self.playlist_frame.pack(fill="both", expand=True)
+
+        # The Queue View - Hidden by default (Approach B Mechanics)
+        self.queue_frame = ctk.CTkScrollableFrame(self.left_panel, fg_color=GRAY)
+
+        # Right container (Takes up 40% width, 92% height)
         self.right_frame = ctk.CTkFrame(self, fg_color="transparent")
         self.right_frame.place(relx=0.60, rely=0.04, relwidth=0.4, relheight=0.92)
 
-        # Album Art
+        # Album art
         self.album_art_frame = ctk.CTkFrame(self.right_frame, width=250, height=250, fg_color=GRAY)
         self.album_art_frame.pack(pady=20)
         
@@ -373,6 +225,14 @@ class MusicPlayer(ctk.CTk):
 
         self.update_playlist_ui()
 
+    def switch_view(self, selected_view):
+        if selected_view == "Playlist":
+            self.queue_frame.pack_forget()
+            self.playlist_frame.pack(fill="both", expand=True)
+        elif selected_view == "Queue":
+            self.playlist_frame.pack_forget()
+            self.queue_frame.pack(fill="both", expand=True)
+
     def update_ui_for_current_track(self):
         """Unified presentation renderer mapping straight from engine truth properties."""
         song = self.engine.current_track
@@ -451,9 +311,9 @@ class MusicPlayer(ctk.CTk):
             row.destroy()
         self.playlist_buttons.clear()
 
-        # Rebuild the list with our custom PlaylistRow objects
+        # Rebuild the list with our custom TrackRow objects
         for index, song in enumerate(self.playlist):
-            row = PlaylistRow(
+            row = ui.TrackRow(
                 master=self.playlist_frame,
                 index=index,
                 title=song["title"],
@@ -467,7 +327,7 @@ class MusicPlayer(ctk.CTk):
         self.highlight_current_song()
 
     def play_selected_song(self, index):
-        """Triggered when a user clicks a song row directly in the playlist."""
+        """Plays a song directly from the playlist."""
         self.current_index = index
         self.engine.current_index = index
         self.engine.stop()
@@ -485,14 +345,62 @@ class MusicPlayer(ctk.CTk):
         """Routes the contextual menu actions for each track."""        
         match action:
             case core.TrackActions.ADD_TO_QUEUE:
-                return
+                track_to_add = self.playlist[index]
+                self.engine.queue.append(track_to_add)
+                self.update_queue_ui()
+
+            case core.TrackActions.REMOVE_FROM_QUEUE:
+                if 0 <= index < len(self.engine.queue):
+                    self.engine.queue.pop(index)
+                    self.update_queue_ui()
+                    if index == 0:
+                        self.engine.queue_head_removed = True
+
             case core.TrackActions.SAVE_TO_PLAYLIST:
                 return
+            
             case core.TrackActions.OPEN_IN_FOLDER:
                 import subprocess
                 track_path = self.playlist[index]["path"]
                 safe_path = os.path.normpath(track_path)
                 subprocess.Popen(f'explorer /select,"{safe_path}"')
+
+    def update_queue_ui(self):
+        """Re-renders the queue view dynamically using our original rows."""
+        for row in self.queue_buttons:
+            row.destroy()
+        self.queue_buttons.clear()
+
+        for index, song in enumerate(self.engine.queue):
+            row = ui.TrackRow(
+                master=self.queue_frame,
+                index=index,
+                title=song["title"],
+                artist=song["artist"],
+                click_callback=self.play_selected_queue_song, # Custom callback for queue clicks
+                options_callback=self.handle_track_options,
+                queue_row=True
+            )
+            row.pack(fill="x", pady=2, padx=5)
+            self.queue_buttons.append(row)
+
+            # Highlight index 0 if the engine is actively running a queue song
+            if index == 0 and getattr(self.engine, "playing_from_queue", False):
+                row.set_active(True)
+
+    def play_selected_queue_song(self, index):
+        """Plays a song directly from the queue."""
+        # Pull and remove track from queue, then update playback
+        song = self.engine.queue[index]
+        self.engine.stop()
+        self.engine.load_track(track=song) # Pass explicit track override parameter
+        self.engine.playing_from_queue = True
+        self.engine.toggle_play()
+
+        # Slice the list to drop everything before the clicked index
+        self.engine.queue = self.engine.queue[index:]
+        self.update_queue_ui()
+        self.update_ui_for_current_track()
 
     def toggle_play(self):
         if not self.playlist:
@@ -555,6 +463,7 @@ class MusicPlayer(ctk.CTk):
             
             if current_pos == -1:
                 self.next_song()
+                self.update_queue_ui()
             elif self.engine.is_playing:
                 max_duration = self.slider.cget("to")
                 if current_pos <= max_duration:
