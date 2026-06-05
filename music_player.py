@@ -38,13 +38,13 @@ class PlaylistRow(ctk.CTkFrame):
         self.index_label = ctk.CTkLabel(self, text=f"{index + 1}", font=("Arial", 13), text_color=VERY_LIGHT_GRAY, width=10, anchor="w")
         self.index_label.pack(side="left", padx=(10, 0))
 
-        # Truncate Title and Artist names if they exceed character limits
-        truncated_title = self.truncate_text(title, max_chars=40)
-        truncated_artist = self.truncate_text(artist, max_chars=40)
+        # Truncate title and artist names if they exceed character limits
+        truncated_title = core.truncate_text(title, max_chars=40)
+        truncated_artist = core.truncate_text(artist, max_chars=40)
         
         display_text = f"{truncated_title}\n{truncated_artist}".strip()
 
-        # Setup the Text Label (Packed to the LEFT)
+        # Setup the text label
         self.label = ctk.CTkLabel(
             self,
             text=display_text,
@@ -53,10 +53,10 @@ class PlaylistRow(ctk.CTkFrame):
             anchor="w",
             justify="left"
         )
-        # fill="both" and expand=True ensures the invisible text bounding box spans the remaining width, keeping the entire left side clickable!
+        # fill="both" and expand=True ensures the invisible text bounding box spans the remaining width, keeping the entire left side clickable
         self.label.pack(side="left", fill="both", expand=True, padx=(10, 0))
 
-        # Options button (Packed to the RIGHT)
+        # Options button
         self.btn_options = ctk.CTkButton(
             self,
             text="•••",
@@ -69,7 +69,7 @@ class PlaylistRow(ctk.CTkFrame):
         )
         self.btn_options.pack(side="right", padx=(0, 5))
 
-        # Bind mouse interactions to the row container and the text label
+        # Bind mouse interactions to the row container, index and text labels
         for widget in (self, self.index_label, self.label):
             widget.bind("<Enter>", self.on_hover)
             widget.bind("<Leave>", self.on_leave)
@@ -80,12 +80,6 @@ class PlaylistRow(ctk.CTkFrame):
         self.btn_options.bind("<Leave>", self.on_options_leave)
 
         self.is_active_song = False
-
-    def truncate_text(self, text, max_chars):
-        """Helper method to slice string and append an ellipsis if it's too long."""
-        if len(text) > max_chars:
-            return text[:max_chars - 3].strip() + "..."
-        return text
 
     def set_active(self, is_active):
         """Changes the row's styling depending on if it's the currently playing track."""
@@ -133,7 +127,8 @@ class PlaylistRow(ctk.CTkFrame):
         self.index_label.configure(text=f"{self.index + 1}")
 
     def show_options_menu(self, event=None):
-        """Creates a gorgeous, borderless dropdown menu to bypass Windows UI overrides."""
+        """Creates a borderless dropdown menu."""
+
         # Create a top-level popup window
         menu = ctk.CTkToplevel(self)
         menu.withdraw() # Hide it instantly while configuring layout
@@ -188,8 +183,7 @@ class PlaylistRow(ctk.CTkFrame):
         def safe_close(event):
             # Only destroy if focus shifted to a completely different window instance
             if event.widget == menu:
-                # Use after_idle so any click commands on the menu buttons 
-                # register BEFORE the window vanishes entirely
+                # Use after_idle so any click commands on the menu buttons register before the window vanishes
                 menu.after_idle(lambda: menu.destroy() if menu.winfo_exists() else None)
 
         menu.bind("<FocusOut>", safe_close)
@@ -207,13 +201,16 @@ class MusicPlayer(ctk.CTk):
         self.geometry("900x550")
         ctk.set_appearance_mode("dark")
 
+        # Playlist variables
         self.playlist = []
         self.playlist_buttons = []
         self.current_index = 0
 
+        # Mixer variables
         self.is_playing = False
         self.is_paused = False
 
+        # Slider settings
         self.is_dragging_slider = False
         self.position_offset = 0.0
 
@@ -223,42 +220,37 @@ class MusicPlayer(ctk.CTk):
         self.load_saved_folder()
 
     def setup_ui(self):
-        # =====================================================================
-        # MASTER SPLIT CONTAINERS
-        # =====================================================================
+        """Set up the app UI."""
+
         # Left Container (Takes up 60% width, 92% height to leave room for window margins)
         self.playlist_frame = ctk.CTkScrollableFrame(self, label_text="Playlist", label_font=("Arial", 16, "bold"), fg_color=GRAY, label_fg_color=LIGHT_GRAY)
         self.playlist_frame.place(relx=0.02, rely=0.04, relwidth=0.56, relheight=0.92)
 
         # Right Container (Takes up 40% width, 92% height)
-        self.right_container = ctk.CTkFrame(self, fg_color="transparent")
-        self.right_container.place(relx=0.60, rely=0.04, relwidth=0.4, relheight=0.92)
-
-        # =====================================================================
-        # RIGHT SIDE UI ELEMENTS (Moved inside self.right_container)
-        # =====================================================================
+        self.right_frame = ctk.CTkFrame(self, fg_color="transparent")
+        self.right_frame.place(relx=0.60, rely=0.04, relwidth=0.4, relheight=0.92)
 
         # Album Art
-        self.album_art_frame = ctk.CTkFrame(self.right_container, width=250, height=250, fg_color=GRAY)
+        self.album_art_frame = ctk.CTkFrame(self.right_frame, width=250, height=250, fg_color=GRAY)
         self.album_art_frame.pack(pady=20)
         
         self.art_label = ctk.CTkLabel(self.album_art_frame, text="🎵", font=("Arial", 80))
         self.art_label.place(relx=0.5, rely=0.5, anchor="center")
 
         # Song title label
-        self.track_label = ctk.CTkLabel(self.right_container, text="No Folder Loaded", font=("Arial", 18, "bold"), wraplength=320, justify="center")
+        self.track_label = ctk.CTkLabel(self.right_frame, text="No Folder Loaded", font=("Arial", 18, "bold"), wraplength=320, justify="center")
         self.track_label.pack(pady=(5, 0))
 
-        self.artist_label = ctk.CTkLabel(self.right_container, text="", font=("Arial", 14))
+        self.artist_label = ctk.CTkLabel(self.right_frame, text="", font=("Arial", 14))
         self.artist_label.pack(pady=(2, 5))
 
         # Progress slider
-        self.slider = ctk.CTkSlider(self.right_container, from_=0, to=1000, number_of_steps=1000, command=self.slider_event)
+        self.slider = ctk.CTkSlider(self.right_frame, from_=0, to=1000, number_of_steps=1000, command=self.slider_event)
         self.slider.pack(fill="x", padx=40, pady=(15, 2))
         self.slider.set(0)
 
         # Track length labels frame
-        self.time_frame = ctk.CTkFrame(self.right_container, fg_color="transparent")
+        self.time_frame = ctk.CTkFrame(self.right_frame, fg_color="transparent")
         self.time_frame.pack(fill="x", padx=40, pady=(0, 10)) # Matches the slider's horizontal span
 
         # Track length labels
@@ -273,7 +265,7 @@ class MusicPlayer(ctk.CTk):
         self.slider.bind("<ButtonRelease-1>", self.on_slider_release)
 
         # Control buttons frame
-        self.controls_frame = ctk.CTkFrame(self.right_container, fg_color="transparent")
+        self.controls_frame = ctk.CTkFrame(self.right_frame, fg_color="transparent")
         self.controls_frame.pack(pady=(10, 0))
 
         self.btn_prev = ctk.CTkButton(self.controls_frame, text="⏮", width=60, font=("Arial", 20), fg_color=BLUE, hover_color=HOVER_BLUE, command=self.prev_song)
@@ -286,7 +278,7 @@ class MusicPlayer(ctk.CTk):
         self.btn_next.grid(row=0, column=2, padx=10)
 
         # Load folder button
-        self.btn_open = ctk.CTkButton(self.right_container, text="Open Music Folder", font=("Arial", 14), fg_color=BLUE, hover_color=HOVER_BLUE, command=self.open_folder)
+        self.btn_open = ctk.CTkButton(self.right_frame, text="Open Music Folder", font=("Arial", 14), fg_color=BLUE, hover_color=HOVER_BLUE, command=self.open_folder)
         self.btn_open.pack(pady=(10, 0))
 
         # Start the slider update loop
@@ -315,23 +307,25 @@ class MusicPlayer(ctk.CTk):
                 print(f"Error loading config: {e}")
 
     def open_folder(self):
-        # Open a native directory selection dialog
+        """Open a native directory selection dialog."""
         folder_path = filedialog.askdirectory(title="Select Music Folder")
         if folder_path:
             self.process_folder(folder_path)
             self.save_folder_path(folder_path)  # Save this path for next time
 
     def process_folder(self, folder_path):
+        """Process the a folder and add all supported audio files to the playlist."""
         self.playlist = []
         
+        # Loop through each file in the processing folder
         for file in os.listdir(folder_path):
             if file.lower().endswith(self.SUPPORTED_EXTENSIONS):
                 full_path = os.path.join(folder_path, file)
 
-                # Default fallbacks if metadata tags are completely missing
+                # Default fallbacks if metadata tags are missing
                 title = os.path.splitext(file)[0]
                 artist = "Unknown Artist"
-                length = 100.0  # Safe fallback length in seconds
+                length = 100.0
 
                 try:
                     audio = mutagen.File(full_path)
@@ -340,7 +334,7 @@ class MusicPlayer(ctk.CTk):
                         if audio.info is not None:
                             length = audio.info.length
                             
-                        # Extract Artist & Title from Metadata Tags
+                        # Extract artist & title from Metadata Tags
                         if hasattr(audio, "tags") and audio.tags:
                             # Handling MP3 ID3 Tags
                             if "TIT2" in audio.tags:  # Title frame
@@ -348,7 +342,7 @@ class MusicPlayer(ctk.CTk):
                             if "TPE1" in audio.tags:  # Artist frame
                                 artist = audio.tags["TPE1"].text[0]
                         else:
-                            # Handling OGG / FLAC Vorbis Comments
+                            # Handling OGG / FLAC Vorbis comments
                             if "title" in audio:
                                 title = audio["title"][0]
                             if "artist" in audio:
@@ -356,7 +350,7 @@ class MusicPlayer(ctk.CTk):
                 except Exception as e:
                     print(f"Error reading tags for {file}: {e}")
 
-                # Save EVERYTHING directly into your playlist data dictionary structure
+                # Add song to playlist in a dictionary structure
                 self.playlist.append({
                     "title": title, 
                     "artist": artist, 
@@ -364,6 +358,7 @@ class MusicPlayer(ctk.CTk):
                     "length": length
                 })
         
+        # Check if playlist is not empty and respond appropriately
         if self.playlist:
             mixer.music.stop()
             self.position_offset = 0.0  
