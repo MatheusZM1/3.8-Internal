@@ -183,6 +183,11 @@ class PlaylistRow(ctk.CTkFrame):
         def safe_close(event):
             # Only destroy if focus shifted to a completely different window instance
             if event.widget == menu:
+                # Determine the widget which is focused, and if it lives in the menu, do not close yet
+                next_focus = menu.focus_get()
+                if next_focus and next_focus.master == menu:
+                    return
+                
                 # Use after_idle so any click commands on the menu buttons register before the window vanishes
                 menu.after_idle(lambda: menu.destroy() if menu.winfo_exists() else None)
 
@@ -201,18 +206,15 @@ class MusicPlayer(ctk.CTk):
         self.geometry("900x550")
         ctk.set_appearance_mode("dark")
 
-        # Playlist variables
+        # Initialize the new Pygame-based playback engine
+        self.engine = core.PlaybackEngine()
+
+        # Local window parameters
         self.playlist = []
         self.playlist_buttons = []
         self.current_index = 0
-
-        # Mixer variables
-        self.is_playing = False
-        self.is_paused = False
-
-        # Slider settings
         self.is_dragging_slider = False
-        self.position_offset = 0.0
+        self.was_playing_before_drag = False
 
         self.SUPPORTED_EXTENSIONS = (".mp3", ".wav", ".ogg")
 
@@ -360,58 +362,48 @@ class MusicPlayer(ctk.CTk):
         
         # Check if playlist is not empty and respond appropriately
         if self.playlist:
-            mixer.music.stop()
-            self.position_offset = 0.0  
-            self.is_playing = False
-            self.is_paused = False
-            self.btn_play.configure(text="▶")
-            
+            # Synchronize track collection to engine boundary layout
+            self.engine.set_playlist(self.playlist, 0)
             self.current_index = 0
-            self.load_song()
+            self.engine.load_track()
+            self.update_ui_for_current_track()
         else:
             self.track_label.configure(text="No supported audio files found")
             self.artist_label.configure(text="")
 
         self.update_playlist_ui()
 
-    def format_time(self, seconds):
-        """Converts seconds into a string formatted as MM:SS."""
-        if seconds is None or seconds < 0:
-            return "00:00"
-            
-        minutes, secs = divmod(int(seconds), 60)
-        return f"{minutes:02d}:{secs:02d}"
-
-    def load_song(self):
-        if self.playlist:
-            song = self.playlist[self.current_index]
-
+    def update_ui_for_current_track(self):
+        """Unified presentation renderer mapping straight from engine truth properties."""
+        song = self.engine.current_track
+        if song:
             self.track_label.configure(text=song["title"])
             self.artist_label.configure(text=song["artist"])
-            self.current_time_label.configure(text="00:00")
-            self.total_time_label.configure(text=self.format_time(song["length"]))
-
-            if os.path.exists(song["path"]):
-                mixer.music.load(song["path"])
-                audio = mutagen.File(song["path"])
-                if audio is not None and audio.info is not None:
-                    self.slider.configure(to=audio.info.length)
-                else:
-                    self.slider.configure(to=100)
-
+            self.total_time_label.configure(text=core.format_time(song["length"]))
+            self.slider.configure(to=song["length"])
+            
+            # Reset timeline layout cleanly if the song is resting at zero position
+            if self.engine.get_current_position() <= 0.1:
+                self.current_time_label.configure(text="00:00")
                 self.slider.set(0)
-                self.position_offset = 0.0  # Reset offset for the fresh track
-                self.is_paused = False
 
-                self.set_album_art(audio)
-                self.highlight_current_song()
+            # Extract visual metadata assets
+            audio = mutagen.File(song["path"])
+            self.set_album_art(audio)
+            self.highlight_current_song()
+
+            # Synchronize presentation toggle characters
+            if self.engine.is_playing:
+                self.btn_play.configure(text="⏸")
+            else:
+                self.btn_play.configure(text="▶")
 
     def set_album_art(self, audio):
         """Extracts cover art from audio metadata and updates the UI."""
         img_data = None
 
         if audio is not None:
-            # 1. Check for MP3 ID3 tags (APIC)
+            # Check for MP3 ID3 tags (APIC)
             if hasattr(audio, "tags") and audio.tags:
                 if "APIC:" in audio.tags:
                     img_data = audio.tags["APIC:"].data
@@ -421,7 +413,7 @@ class MusicPlayer(ctk.CTk):
                             img_data = audio.tags[key].data
                             break
             
-            # 2. Check for FLAC / OGG / WAV Vorbis Comments
+            # Check for FLAC / OGG / WAV Vorbis Comments
             if not img_data and hasattr(audio, "pictures") and audio.pictures:
                 img_data = audio.pictures[0].data
 
@@ -447,21 +439,19 @@ class MusicPlayer(ctk.CTk):
         if hasattr(self.art_label, "image"):
             self.art_label.image = None
             
-        # Directly clear the underlying Tkinter widget's image property before telling CustomTkinter to swap back to text.
+        # Directly clear the underlying Tkinter widget's image property swapping back to text.
         self.art_label._label.configure(image="") 
-        
-        # Now update the CustomTkinter wrapper safely
         self.art_label.configure(image=None, text="🎵", font=("Arial", 80))
         self.album_art_frame.configure(fg_color=GRAY)
 
     def update_playlist_ui(self):
         """Clears the scrollable frame and redraws all track rows using the helper class."""
-        # 1. Destroy old row components to clear memory references cleanly
+        # Destroy old row components to clear memory references cleanly
         for row in self.playlist_buttons:
             row.destroy()
         self.playlist_buttons.clear()
 
-        # 2. Rebuild the list with our custom PlaylistRow objects
+        # Rebuild the list with our custom PlaylistRow objects
         for index, song in enumerate(self.playlist):
             row = PlaylistRow(
                 master=self.playlist_frame,
@@ -474,34 +464,30 @@ class MusicPlayer(ctk.CTk):
             row.pack(fill="x", pady=2, padx=5)
             self.playlist_buttons.append(row)
             
-        # 3. Highlight the initial song right out of the gate
         self.highlight_current_song()
 
     def play_selected_song(self, index):
         """Triggered when a user clicks a song row directly in the playlist."""
         self.current_index = index
-        self.is_playing = False
-        self.load_song()
-        self.toggle_play()
+        self.engine.current_index = index
+        self.engine.stop()
+        self.engine.load_track()
+        self.engine.toggle_play()
+        self.update_ui_for_current_track()
 
     def highlight_current_song(self):
         """Loops through UI rows and updates their visual selection state."""
         for row in self.playlist_buttons:
-            # If the row matches our current playing index, give it the active highlight theme
             is_current = (row.index == self.current_index)
             row.set_active(is_current)
 
     def handle_track_options(self, index, action : core.TrackActions):
-        """Routes the contextual menu actions for each track."""
-        print(f"Track Index {index} requested action: {action}")
-        
+        """Routes the contextual menu actions for each track."""        
         match action:
             case core.TrackActions.ADD_TO_QUEUE:
                 return
-                
             case core.TrackActions.SAVE_TO_PLAYLIST:
                 return
-
             case core.TrackActions.OPEN_IN_FOLDER:
                 import subprocess
                 track_path = self.playlist[index]["path"]
@@ -512,81 +498,70 @@ class MusicPlayer(ctk.CTk):
         if not self.playlist:
             return
 
-        if not self.is_playing:
-            if self.is_paused:
-                mixer.music.unpause()
-            else:
-                mixer.music.play()
-                self.position_offset = 0.0  # Reset on a brand new song start
-            
+        self.engine.toggle_play()
+        if self.engine.is_playing:
             self.btn_play.configure(text="⏸")
-            self.is_playing = True
-            self.is_paused = False
         else:
-            mixer.music.pause()
             self.btn_play.configure(text="▶")
-            self.is_playing = False
-            self.is_paused = True
 
     def next_song(self):
         if self.playlist:
-            self.current_index = (self.current_index + 1) % len(self.playlist)
-            self.is_playing = False
-            self.load_song()
-            self.toggle_play()
+            self.engine.next_track()
+            self.current_index = self.engine.current_index
+            self.update_ui_for_current_track()
 
     def prev_song(self):
         if self.playlist:
-            self.current_index = (self.current_index - 1) % len(self.playlist)
-            self.is_playing = False
-            self.load_song()
-            self.toggle_play()
+            self.engine.prev_track()
+            self.current_index = self.engine.current_index
+            self.update_ui_for_current_track()
 
     def on_slider_press(self, event):
         """Triggered when the user clicks down on the slider."""
         self.is_dragging_slider = True
-        if self.is_playing:
-            self.toggle_play()
+        self.was_playing_before_drag = self.engine.is_playing
+        if self.engine.is_playing:
+            self.engine.toggle_play()
+            self.btn_play.configure(text="▶")
 
     def on_slider_release(self, event):
         """Triggered when the user lets go of the slider."""
-        if self.playlist:
+        if self.engine.current_track is not None:
             new_pos = self.slider.get()
-
-            if not self.is_playing:
-                self.toggle_play()
+            self.engine.seek(new_pos)
             
-            mixer.music.set_pos(new_pos)
+            # Continue playing track if it was playing before the drag started
+            if getattr(self, "was_playing_before_drag", False):
+                if not self.engine.is_playing:
+                    self.engine.toggle_play()
             
-            mixer.music.play(start=new_pos) 
-            self.position_offset = new_pos
-            
-            # Maintain active playback visual state if we were already playing
-            if not self.is_paused:
-                self.is_playing = True
+            if self.engine.is_playing:
                 self.btn_play.configure(text="⏸")
+            else:
+                self.btn_play.configure(text="▶")
 
         self.is_dragging_slider = False
 
     def slider_event(self, value):
         """Triggered continuously while dragging the slider knob."""
-        self.current_time_label.configure(text=self.format_time(value))  # Update current time label in real-time as slider moves
+        self.current_time_label.configure(text=core.format_time(value))  # Update current time label in real-time as slider moves
 
     def update_slider(self):
-        if self.is_playing and not self.is_paused and not self.is_dragging_slider:
-            # Calculate the current position by adding the offset (where the song started) to the elapsed time from mixer.music.get_pos()
-            current_pos = self.position_offset + (mixer.music.get_pos() / 1000)
+        """Continously update the slider position."""
+
+        # Onlu update the slider if music is playing, unpaused, and the user is not dragging the slider
+        if self.engine.is_playing and not self.engine.is_paused and not self.is_dragging_slider:
+            current_pos = self.engine.get_current_position()
             
-            # Prevent slider from exceeding track boundaries
-            if current_pos <= self.slider.cget("to"):
-                self.slider.set(current_pos)
-                self.current_time_label.configure(text=self.format_time(current_pos))
-            else:
-                self.slider.set(self.slider.cget("to"))
-                self.current_time_label.configure(text=self.format_time(self.slider.cget("to")))
-                self.next_song()  # Jump to next track when song finishes
+            if current_pos == -1:
+                self.next_song()
+            elif self.engine.is_playing:
+                max_duration = self.slider.cget("to")
+                if current_pos <= max_duration:
+                    self.slider.set(current_pos)
+                    self.current_time_label.configure(text=core.format_time(current_pos))
         
-        self.after(10, self.update_slider)  # Schedule the next slider update
+        self.after(100, self.update_slider)  # Schedule the next slider update
 
 # Main routine
 if __name__ == "__main__":
