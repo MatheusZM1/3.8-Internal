@@ -41,6 +41,7 @@ class MusicPlayer(ctk.CTk):
 
         # Queue variables
         self.queue_buttons = []
+        self.queue_view_active = False
 
         # Slider variables
         self.is_dragging_slider = False
@@ -122,14 +123,20 @@ class MusicPlayer(ctk.CTk):
         self.controls_frame = ctk.CTkFrame(self.right_frame, fg_color="transparent")
         self.controls_frame.pack(pady=(10, 0))
 
-        self.btn_prev = ctk.CTkButton(self.controls_frame, text="⏮", width=60, font=("Arial", 20), fg_color=BLUE, hover_color=HOVER_BLUE, command=self.prev_song)
-        self.btn_prev.grid(row=0, column=0, padx=10)
+        self.btn_shuffle = ctk.CTkButton(self.controls_frame, text="🔀", width=40, font=("Arial", 20), fg_color=GRAY, hover_color=LIGHT_GRAY, command=self.toggle_shuffle)
+        self.btn_shuffle.grid(row=0, column=0, padx=10)
 
-        self.btn_play = ctk.CTkButton(self.controls_frame, text="▶", width=80, font=("Arial", 20), fg_color=BLUE, hover_color=HOVER_BLUE, command=self.toggle_play)
-        self.btn_play.grid(row=0, column=1, padx=10)
+        self.btn_prev = ctk.CTkButton(self.controls_frame, text="⏮", width=40, font=("Arial", 20), fg_color=BLUE, hover_color=HOVER_BLUE, command=self.prev_song)
+        self.btn_prev.grid(row=0, column=1, padx=10)
 
-        self.btn_next = ctk.CTkButton(self.controls_frame, text="⏭", width=60, font=("Arial", 20), fg_color=BLUE, hover_color=HOVER_BLUE, command=self.next_song)
-        self.btn_next.grid(row=0, column=2, padx=10)
+        self.btn_play = ctk.CTkButton(self.controls_frame, text="▶", width=60, font=("Arial", 20), fg_color=BLUE, hover_color=HOVER_BLUE, command=self.toggle_play)
+        self.btn_play.grid(row=0, column=2, padx=10)
+
+        self.btn_next = ctk.CTkButton(self.controls_frame, text="⏭", width=40, font=("Arial", 20), fg_color=BLUE, hover_color=HOVER_BLUE, command=self.next_song)
+        self.btn_next.grid(row=0, column=3, padx=10)
+
+        self.btn_loop = ctk.CTkButton(self.controls_frame, text="🔁", width=40, font=("Arial", 20), fg_color=GRAY, hover_color=LIGHT_GRAY, command=self.toggle_loop)
+        self.btn_loop.grid(row=0, column=4, padx=10)
 
         # Load folder button
         self.btn_open = ctk.CTkButton(self.right_frame, text="Open Music Folder", font=("Arial", 14), fg_color=BLUE, hover_color=HOVER_BLUE, command=self.open_folder)
@@ -229,9 +236,11 @@ class MusicPlayer(ctk.CTk):
         if selected_view == "Playlist":
             self.queue_frame.pack_forget()
             self.playlist_frame.pack(fill="both", expand=True)
+            self.queue_view_active = False
         elif selected_view == "Queue":
             self.playlist_frame.pack_forget()
             self.queue_frame.pack(fill="both", expand=True)
+            self.queue_view_active = True
 
     def update_ui_for_current_track(self):
         """Unified presentation renderer mapping straight from engine truth properties."""
@@ -250,7 +259,7 @@ class MusicPlayer(ctk.CTk):
             # Extract visual metadata assets
             audio = mutagen.File(song["path"])
             self.set_album_art(audio)
-            self.highlight_current_song()
+            self.highlight_current_song(self.queue_buttons if self.queue_view_active else self.playlist_buttons)
 
             # Synchronize presentation toggle characters
             if self.engine.is_playing:
@@ -319,12 +328,14 @@ class MusicPlayer(ctk.CTk):
                 title=song["title"],
                 artist=song["artist"],
                 click_callback=self.play_selected_song,
-                options_callback=self.handle_track_options
+                options_callback=self.handle_track_options,
+                drag_callback=self.handle_row_drag,
+                drop_callback=self.handle_row_drop
             )
             row.pack(fill="x", pady=2, padx=5)
             self.playlist_buttons.append(row)
             
-        self.highlight_current_song()
+        self.highlight_current_song(self.playlist_buttons)
 
     def play_selected_song(self, index):
         """Plays a song directly from the playlist."""
@@ -335,9 +346,9 @@ class MusicPlayer(ctk.CTk):
         self.engine.toggle_play()
         self.update_ui_for_current_track()
 
-    def highlight_current_song(self):
+    def highlight_current_song(self, buttons_list):
         """Loops through UI rows and updates their visual selection state."""
-        for row in self.playlist_buttons:
+        for row in buttons_list:
             is_current = (row.index == self.current_index)
             row.set_active(is_current)
 
@@ -379,14 +390,14 @@ class MusicPlayer(ctk.CTk):
                 artist=song["artist"],
                 click_callback=self.play_selected_queue_song, # Custom callback for queue clicks
                 options_callback=self.handle_track_options,
+                drag_callback=self.handle_row_drag,
+                drop_callback=self.handle_row_drop,
                 queue_row=True
             )
             row.pack(fill="x", pady=2, padx=5)
             self.queue_buttons.append(row)
 
-            # Highlight index 0 if the engine is actively running a queue song
-            if index == 0 and getattr(self.engine, "playing_from_queue", False):
-                row.set_active(True)
+        self.highlight_current_song(self.queue_buttons)
 
     def play_selected_queue_song(self, index):
         """Plays a song directly from the queue."""
@@ -402,6 +413,85 @@ class MusicPlayer(ctk.CTk):
         self.update_queue_ui()
         self.update_ui_for_current_track()
 
+    def handle_row_drag(self, row_widget, y_root):
+        """Tracks mouse movement and instantly flips positions with adjacent neighbors."""
+        # Determine which bucket we are sorting based on layout parent containers
+        if row_widget.master == self.queue_frame:
+            buttons_list = self.queue_buttons
+        else:
+            buttons_list = self.playlist_buttons
+
+        current_idx = row_widget.index
+
+        # Check item directly above the moving item
+        if current_idx > 0:
+            above_row = buttons_list[current_idx - 1]
+            above_center = above_row.winfo_rooty() + (above_row.winfo_height() / 2)
+            if y_root < above_center:
+                self.swap_rows(row_widget.master, current_idx, current_idx - 1)
+                return
+
+        # Check item directly below the moving item
+        if current_idx < len(buttons_list) - 1:
+            below_row = buttons_list[current_idx + 1]
+            below_center = below_row.winfo_rooty() + (below_row.winfo_height() / 2)
+            if y_root > below_center:
+                self.swap_rows(row_widget.master, current_idx, current_idx + 1)
+                return
+
+    def swap_rows(self, master_frame, idx1, idx2):
+        """Swaps data arrays and handles non-destructive, highly optimized UI adjustments."""
+        if master_frame == self.queue_frame:
+            buttons_list = self.queue_buttons
+            data_list = self.engine.queue
+        else:
+            buttons_list = self.playlist_buttons
+            data_list = self.playlist
+
+        # Keep a direct reference to the two widgets being altered
+        moving_row = buttons_list[idx1]
+        neighbor_row = buttons_list[idx2]
+
+        # Swap raw data pointers
+        data_list[idx1], data_list[idx2] = data_list[idx2], data_list[idx1]
+        # Swap visual component array tracking addresses
+        buttons_list[idx1], buttons_list[idx2] = buttons_list[idx2], buttons_list[idx1]
+
+        # Explicitly update indices for only the two affected rows
+        moving_row.index = idx2
+        neighbor_row.index = idx1
+
+        # Update text labels for only the two affected rows
+        moving_row.index_label.configure(text=f"{idx2 + 1}")
+        neighbor_row.index_label.configure(text=f"{idx1 + 1}")
+        moving_row.index_label.update_idletasks()
+
+        # Re-order via Tkinter's native before/after pack parameters, avoiding pack_forget lag
+        if idx2 < idx1:
+            # Moving up: Pack the moving row right before its upper neighbor
+            moving_row.pack(before=neighbor_row)
+        else:
+            # Moving down: Pack the moving row right after its lower neighbor
+            moving_row.pack(after=neighbor_row)
+
+    def handle_row_drop(self, row_widget):
+        """Locks elements down cleanly when user lets go of the mouse button."""
+        # Instantly restore the row's true background style
+        row_widget.set_active(row_widget.is_active_song)
+
+        # Determine which list we are referencing
+        if row_widget.master == self.queue_frame:
+            buttons_list = self.queue_buttons
+        else:
+            buttons_list = self.playlist_buttons
+
+        # Scan the list to find the active song's new index position
+        for row in buttons_list:
+            if row.is_active_song:
+                self.current_index = row.index
+                self.engine.current_index = row.index
+                break
+
     def toggle_play(self):
         if not self.playlist:
             return
@@ -412,9 +502,29 @@ class MusicPlayer(ctk.CTk):
         else:
             self.btn_play.configure(text="▶")
 
+    def toggle_loop(self):
+        if not self.engine.current_track:
+            return
+
+        self.engine.toggle_loop()
+        if self.engine.is_looping:
+            self.btn_loop.configure(fg_color=BLUE, hover_color=HOVER_BLUE)
+        else:
+            self.btn_loop.configure(fg_color=GRAY, hover_color=LIGHT_GRAY)
+
+    def toggle_shuffle(self):
+        if not self.playlist:
+            return
+
+        self.engine.toggle_shuffle()
+        if self.engine.is_shuffling:
+            self.btn_shuffle.configure(fg_color=BLUE, hover_color=HOVER_BLUE)
+        else:
+            self.btn_shuffle.configure(fg_color=GRAY, hover_color=LIGHT_GRAY)
+
     def next_song(self):
         if self.playlist:
-            self.engine.next_track()
+            self.engine.next_track(force=True)
             self.current_index = self.engine.current_index
             self.update_ui_for_current_track()
 

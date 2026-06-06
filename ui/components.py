@@ -12,7 +12,7 @@ BLUE = "#1a6faf"
 HOVER_BLUE = "#145a86"
 
 class TrackRow(ctk.CTkFrame):
-    def __init__(self, master, index, title, artist, click_callback, options_callback, queue_row=False):
+    def __init__(self, master, index, title, artist, click_callback, options_callback, drag_callback=None, drop_callback=None, queue_row=False):
         super().__init__(
             master,
             fg_color="transparent",
@@ -22,11 +22,17 @@ class TrackRow(ctk.CTkFrame):
         self.pack_propagate(False)
         
         self.index = index
+
         self.click_callback = click_callback
         self.options_callback = options_callback
-        self.queue_row = queue_row
+        self.drag_callback = drag_callback
+        self.drop_callback = drop_callback
 
-        self.index_label = ctk.CTkLabel(self, text=f"{index + 1}", font=("Arial", 13), text_color=VERY_LIGHT_GRAY, width=10, anchor="w")
+        self.is_active_song = False
+        self.queue_row = queue_row
+        self.drag_triggered = False
+
+        self.index_label = ctk.CTkLabel(self, text=f"{index + 1}", font=("Arial", 13), text_color=VERY_LIGHT_GRAY, width=20, anchor="w")
         self.index_label.pack(side="left", padx=(10, 0))
 
         # Truncate title and artist names if they exceed character limits
@@ -64,13 +70,56 @@ class TrackRow(ctk.CTkFrame):
         for widget in (self, self.index_label, self.label):
             widget.bind("<Enter>", self.on_hover)
             widget.bind("<Leave>", self.on_leave)
-            widget.bind("<Button-1>", self.on_click)
+            widget.bind("<Button-1>", self.on_press)
+            widget.bind("<B1-Motion>", self.on_drag)
+            widget.bind("<ButtonRelease-1>", self.on_release)
             widget.bind("<Button-3>", self.show_options_menu)
 
         self.btn_options.bind("<Enter>", self.on_options_hover)
         self.btn_options.bind("<Leave>", self.on_options_leave)
+    
+    def on_press(self, event):
+        self.start_y = event.y_root
+        self.drag_triggered = False
+        self.press_triggered = True  # Track that a legitimate click started here
 
-        self.is_active_song = False
+    def on_drag(self, event):
+        if not getattr(self, "start_y", False):
+            return
+
+        # 5-pixel movement window to differentaite between clicks and drags
+        if abs(event.y_root - self.start_y) > 5:
+            if not self.drag_triggered:
+                self.drag_triggered = True
+                # Visual indicator: turn the row a lighter shade while held down
+                self.configure(fg_color=LIGHT_GRAY) 
+            
+            # Route absolute mouse coordinates up to the master controller window
+            if self.drag_callback:
+                self.drag_callback(self, event.y_root)
+
+    def on_release(self, event):
+        # If this specific row never felt the initial mouse down, ignore the mouse release
+        if not getattr(self, "press_triggered", False):
+            return
+            
+        self.press_triggered = False # Reset the state variable
+
+        if self.drag_triggered:
+            if self.drop_callback:
+                self.drop_callback(self)
+                self.drag_triggered = False
+        else:
+            self.on_click(event)
+
+    def on_click(self, event):
+        """Call playlist selection logic."""
+        self.click_callback(self.index)
+        if self.winfo_exists():
+            try:
+                self.index_label.configure(text=f"{self.index + 1}")
+            except Exception:
+                pass
 
     def set_active(self, is_active):
         """Changes the row's styling depending on if it's the currently playing track."""
@@ -88,13 +137,13 @@ class TrackRow(ctk.CTkFrame):
 
     def on_hover(self, event):
         """Highlight the background row when the cursor is over it."""
-        if not self.is_active_song:
+        if not self.is_active_song and not self.drag_triggered:
             self.configure(fg_color=LIGHT_GRAY)
             self.index_label.configure(text=f"▶")
 
     def on_leave(self, event):
         """Remove background highlight when cursor moves away."""
-        if not self.is_active_song:
+        if not self.is_active_song and not self.drag_triggered:
             self.configure(fg_color="transparent")
             self.index_label.configure(text=f"{self.index + 1}")
     
@@ -111,15 +160,6 @@ class TrackRow(ctk.CTkFrame):
         self.btn_options.configure(fg_color="transparent")
         if not self.is_active_song:
             self.configure(fg_color="transparent")
-
-    def on_click(self, event):
-        """Call playlist selection logic."""
-        self.click_callback(self.index)
-        if self.winfo_exists():
-            try:
-                self.index_label.configure(text=f"{self.index + 1}")
-            except Exception:
-                pass
 
     def show_options_menu(self, event=None):
         """Creates a borderless dropdown menu."""

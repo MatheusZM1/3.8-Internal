@@ -1,4 +1,5 @@
 import os
+import random
 from pygame import mixer
 
 class PlaybackEngine:
@@ -16,6 +17,8 @@ class PlaybackEngine:
 
         self.is_playing = False
         self.is_paused = False
+        self.is_looping = False
+        self.is_shuffling = False
         self.position_offset = 0.0
 
     def set_playlist(self, playlist, start_index=0):
@@ -70,9 +73,30 @@ class PlaybackEngine:
             self.is_paused = True
             
         return self.is_playing
+    
+    def toggle_loop(self):
+        """Toggles looping on/off."""
+        self.is_looping = not self.is_looping
 
-    def next_track(self):
+    def toggle_shuffle(self):
+        """Toggles shuffle on/off. When shuffle is turned on, the playlist order is randomized."""
+        self.is_shuffling = not self.is_shuffling
+
+    def next_track(self, force=False):
         """Cycles forward. Automatically checks from the queue first."""
+        if force:
+            self.current_index = (self.current_index + 1) % len(self.playlist)
+            self.is_playing = False
+            self.load_track()
+            self.toggle_play()
+            return self.current_track
+        
+        if self.is_looping:
+            self.stop()
+            self.load_track()
+            self.toggle_play()
+            return self.current_track
+
         if self.playing_from_queue and self.queue:
             if not self.queue_head_removed:
                 self.queue.pop(0)
@@ -87,8 +111,15 @@ class PlaybackEngine:
             self.load_track(track=next_up)
             self.toggle_play()
         elif self.playlist:
-            # Standard playlist progression loop
-            self.current_index = (self.current_index + 1) % len(self.playlist)
+            # Shuffle or standard playlist progression loop
+            if self.is_shuffling:
+                while True:                    
+                    random_index = random.randint(0, len(self.playlist) - 1)
+                    if random_index != self.current_index:  # Avoid repeating the same track when shuffling
+                        break
+                self.current_index = random_index
+            else:
+                self.current_index = (self.current_index + 1) % len(self.playlist)
             self.is_playing = False
             self.load_track()
             self.toggle_play()
