@@ -47,7 +47,7 @@ class MusicPlayer(ctk.CTk):
         self.is_dragging_slider = False
         self.was_playing_before_drag = False
 
-        self.SUPPORTED_EXTENSIONS = (".mp3", ".wav", ".ogg")
+        self.SUPPORTED_EXTENSIONS = (".mp3", ".wav", ".ogg", ".flac")
 
         self.setup_ui()
         self.load_saved_folder()
@@ -123,23 +123,29 @@ class MusicPlayer(ctk.CTk):
         self.controls_frame = ctk.CTkFrame(self.right_frame, fg_color="transparent")
         self.controls_frame.pack(pady=(10, 0))
 
-        self.btn_shuffle = ctk.CTkButton(self.controls_frame, text="🔀", width=40, font=("Arial", 20), fg_color=GRAY, hover_color=LIGHT_GRAY, command=self.toggle_shuffle)
+        self.btn_shuffle = ctk.CTkButton(self.controls_frame, text="🔀", width=40, font=("Arial", 20), fg_color=GRAY, hover_color=LIGHT_GRAY, 
+                                    command=self.toggle_shuffle)
         self.btn_shuffle.grid(row=0, column=0, padx=10)
 
-        self.btn_prev = ctk.CTkButton(self.controls_frame, text="⏮", width=40, font=("Arial", 20), fg_color=BLUE, hover_color=HOVER_BLUE, command=self.prev_song)
+        self.btn_prev = ctk.CTkButton(self.controls_frame, text="⏮", width=40, font=("Arial", 20), fg_color=BLUE, hover_color=HOVER_BLUE,
+                                    command=self.prev_song)
         self.btn_prev.grid(row=0, column=1, padx=10)
 
-        self.btn_play = ctk.CTkButton(self.controls_frame, text="▶", width=60, font=("Arial", 20), fg_color=BLUE, hover_color=HOVER_BLUE, command=self.toggle_play)
+        self.btn_play = ctk.CTkButton(self.controls_frame, text="▶", width=60, font=("Arial", 20), fg_color=BLUE, hover_color=HOVER_BLUE, 
+                                    command=self.toggle_play)
         self.btn_play.grid(row=0, column=2, padx=10)
 
-        self.btn_next = ctk.CTkButton(self.controls_frame, text="⏭", width=40, font=("Arial", 20), fg_color=BLUE, hover_color=HOVER_BLUE, command=self.next_song)
+        self.btn_next = ctk.CTkButton(self.controls_frame, text="⏭", width=40, font=("Arial", 20), fg_color=BLUE, hover_color=HOVER_BLUE, 
+                                    command=lambda: self.next_song(force=True))
         self.btn_next.grid(row=0, column=3, padx=10)
 
-        self.btn_loop = ctk.CTkButton(self.controls_frame, text="🔁", width=40, font=("Arial", 20), fg_color=GRAY, hover_color=LIGHT_GRAY, command=self.toggle_loop)
+        self.btn_loop = ctk.CTkButton(self.controls_frame, text="🔁", width=40, font=("Arial", 20), fg_color=GRAY, hover_color=LIGHT_GRAY, 
+                                    command=self.toggle_loop)
         self.btn_loop.grid(row=0, column=4, padx=10)
 
         # Load folder button
-        self.btn_open = ctk.CTkButton(self.right_frame, text="Open Music Folder", font=("Arial", 14), fg_color=BLUE, hover_color=HOVER_BLUE, command=self.open_folder)
+        self.btn_open = ctk.CTkButton(self.right_frame, text="Open Music Folder", font=("Arial", 14), fg_color=BLUE, hover_color=HOVER_BLUE, 
+                                    command=self.open_folder)
         self.btn_open.pack(pady=(10, 0))
 
         # Start the slider update loop
@@ -195,19 +201,22 @@ class MusicPlayer(ctk.CTk):
                         if audio.info is not None:
                             length = audio.info.length
                             
-                        # Extract artist & title from Metadata Tags
-                        if hasattr(audio, "tags") and audio.tags:
-                            # Handling MP3 ID3 Tags
-                            if "TIT2" in audio.tags:  # Title frame
-                                title = audio.tags["TIT2"].text[0]
-                            if "TPE1" in audio.tags:  # Artist frame
-                                artist = audio.tags["TPE1"].text[0]
-                        else:
-                            # Handling OGG / FLAC Vorbis comments
-                            if "title" in audio:
-                                title = audio["title"][0]
-                            if "artist" in audio:
-                                artist = audio["artist"][0]
+                        # Standardize the tags target (FLAC/MP3 use .tags, some OGG profiles map directly to audio)
+                        tags = audio.tags if hasattr(audio, "tags") and audio.tags else audio
+                        
+                        if tags is not None:
+                            # Title exraction
+                            if "TIT2" in tags:        # MP3 ID3
+                                title = tags["TIT2"].text[0]
+                            elif "title" in tags:     # FLAC / OGG Vorbis
+                                title = tags["title"][0]
+                                
+                            # Artist extraction
+                            if "TPE1" in tags:        # MP3 ID3
+                                artist = tags["TPE1"].text[0]
+                            elif "artist" in tags:    # FLAC / OGG Vorbis
+                                artist = tags["artist"][0]
+
                 except Exception as e:
                     print(f"Error reading tags for {file}: {e}")
 
@@ -334,8 +343,9 @@ class MusicPlayer(ctk.CTk):
             )
             row.pack(fill="x", pady=2, padx=5)
             self.playlist_buttons.append(row)
-            
-        self.highlight_current_song(self.playlist_buttons)
+
+        if not self.engine.playing_from_queue: 
+            self.highlight_current_song(self.playlist_buttons)
 
     def play_selected_song(self, index):
         """Plays a song directly from the playlist."""
@@ -345,12 +355,18 @@ class MusicPlayer(ctk.CTk):
         self.engine.load_track()
         self.engine.toggle_play()
         self.update_ui_for_current_track()
+        self.unhighlight_all_songs(self.queue_buttons)
 
     def highlight_current_song(self, buttons_list):
         """Loops through UI rows and updates their visual selection state."""
         for row in buttons_list:
             is_current = (row.index == self.current_index)
             row.set_active(is_current)
+
+    def unhighlight_all_songs(self, buttons_list):
+        """Resets all rows to the unselected state."""
+        for row in buttons_list:
+            row.set_active(False)
 
     def handle_track_options(self, index, action : core.TrackActions):
         """Routes the contextual menu actions for each track."""        
@@ -397,10 +413,13 @@ class MusicPlayer(ctk.CTk):
             row.pack(fill="x", pady=2, padx=5)
             self.queue_buttons.append(row)
 
-        self.highlight_current_song(self.queue_buttons)
+        if self.engine.playing_from_queue:
+            self.highlight_current_song(self.queue_buttons)
 
     def play_selected_queue_song(self, index):
         """Plays a song directly from the queue."""
+        self.current_index = 0
+        self.engine.current_index = 0
         # Pull and remove track from queue, then update playback
         song = self.engine.queue[index]
         self.engine.stop()
@@ -412,6 +431,7 @@ class MusicPlayer(ctk.CTk):
         self.engine.queue = self.engine.queue[index:]
         self.update_queue_ui()
         self.update_ui_for_current_track()
+        self.unhighlight_all_songs(self.playlist_buttons)
 
     def handle_row_drag(self, row_widget, y_root):
         """Tracks mouse movement and instantly flips positions with adjacent neighbors."""
@@ -522,9 +542,9 @@ class MusicPlayer(ctk.CTk):
         else:
             self.btn_shuffle.configure(fg_color=GRAY, hover_color=LIGHT_GRAY)
 
-    def next_song(self):
+    def next_song(self, force=False):
         if self.playlist:
-            self.engine.next_track(force=True)
+            self.engine.next_track(force)
             self.current_index = self.engine.current_index
             self.update_ui_for_current_track()
 
