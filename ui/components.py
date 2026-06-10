@@ -202,13 +202,13 @@ class TrackRow(ctk.CTkFrame):
             else:
                 row_pady = 0
                 
-            btn.pack(fill="x", padx=4, pady=row_pady)
+            btn.pack(fill="x", padx=2, pady=row_pady)
 
         # If triggered by right-click, use the mouse position for more intuitive context menu placement
         # Otherwise, position the menu precisely right underneath the options icon button
         if event is not None:
-            x = event.x_root
-            y = event.y_root + 10
+            x = event.x_root - 3
+            y = event.y_root
         else:
             x = self.btn_options.winfo_rootx()
             y = self.btn_options.winfo_rooty() + self.btn_options.winfo_height()
