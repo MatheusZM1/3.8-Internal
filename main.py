@@ -136,7 +136,7 @@ class MusicPlayer(ctk.CTk):
         self.btn_play.grid(row=0, column=2, padx=10)
 
         self.btn_next = ctk.CTkButton(self.controls_frame, text="⏭", width=40, font=("Arial", 20), fg_color=BLUE, hover_color=HOVER_BLUE, 
-                                    command=lambda: self.next_song(force=True))
+                                    command=self.next_song)
         self.btn_next.grid(row=0, column=3, padx=10)
 
         self.btn_loop = ctk.CTkButton(self.controls_frame, text="🔁", width=40, font=("Arial", 20), fg_color=GRAY, hover_color=LIGHT_GRAY, 
@@ -231,7 +231,7 @@ class MusicPlayer(ctk.CTk):
         # Check if playlist is not empty and respond appropriately
         if self.playlist:
             # Synchronize track collection to engine boundary layout
-            self.engine.set_playlist(self.playlist, 0)
+            self.engine.set_playlist(self.playlist)
             self.current_index = 0
             self.engine.load_track()
             self.update_ui_for_current_track()
@@ -268,7 +268,7 @@ class MusicPlayer(ctk.CTk):
             # Extract visual metadata assets
             audio = mutagen.File(song["path"])
             self.set_album_art(audio)
-            self.highlight_current_song(self.queue_buttons if self.queue_view_active else self.playlist_buttons)
+            self.highlight_current_song(self.queue_buttons if self.engine.playing_from_queue else self.playlist_buttons)
 
             # Synchronize presentation toggle characters
             if self.engine.is_playing:
@@ -353,6 +353,7 @@ class MusicPlayer(ctk.CTk):
         self.engine.current_index = index
         self.engine.stop()
         self.engine.load_track()
+        self.engine.playing_from_queue = False
         self.engine.toggle_play()
         self.update_ui_for_current_track()
         self.unhighlight_all_songs(self.queue_buttons)
@@ -393,7 +394,7 @@ class MusicPlayer(ctk.CTk):
                 subprocess.Popen(f'explorer /select,"{safe_path}"')
 
     def update_queue_ui(self):
-        """Re-renders the queue view dynamically using our original rows."""
+        """Re-renders the queue view dynamically using the original rows."""
         for row in self.queue_buttons:
             row.destroy()
         self.queue_buttons.clear()
@@ -414,6 +415,7 @@ class MusicPlayer(ctk.CTk):
             self.queue_buttons.append(row)
 
         if self.engine.playing_from_queue:
+            print("highlight current")
             self.highlight_current_song(self.queue_buttons)
 
     def play_selected_queue_song(self, index):
@@ -542,11 +544,22 @@ class MusicPlayer(ctk.CTk):
         else:
             self.btn_shuffle.configure(fg_color=GRAY, hover_color=LIGHT_GRAY)
 
-    def next_song(self, force=False):
-        if self.playlist:
-            self.engine.next_track(force)
+    def next_song(self):
+        originally_in_queue = self.engine.playing_from_queue
+
+        if self.playlist or self.engine.queue:
+            self.engine.next_track()
             self.current_index = self.engine.current_index
             self.update_ui_for_current_track()
+
+            if originally_in_queue != self.engine.playing_from_queue:
+                if self.engine.playing_from_queue:
+                    self.unhighlight_all_songs(self.playlist_buttons)
+                elif self.engine.queue:
+                    self.unhighlight_all_songs(self.queue_buttons)
+
+        if self.engine.playing_from_queue:
+            self.update_queue_ui()
 
     def prev_song(self):
         if self.playlist:
@@ -587,13 +600,12 @@ class MusicPlayer(ctk.CTk):
     def update_slider(self):
         """Continously update the slider position."""
 
-        # Onlu update the slider if music is playing, unpaused, and the user is not dragging the slider
+        # Only update the slider if music is playing, unpaused, and the user is not dragging the slider
         if self.engine.is_playing and not self.engine.is_paused and not self.is_dragging_slider:
             current_pos = self.engine.get_current_position()
             
             if current_pos == -1:
                 self.next_song()
-                self.update_queue_ui()
             elif self.engine.is_playing:
                 max_duration = self.slider.cget("to")
                 if current_pos <= max_duration:

@@ -82,15 +82,8 @@ class PlaybackEngine:
         """Toggles shuffle on/off. When shuffle is turned on, the playlist order is randomized."""
         self.is_shuffling = not self.is_shuffling
 
-    def next_track(self, force=False):
-        """Cycles forward. Automatically checks from the queue first."""
-        if force:
-            self.current_index = (self.current_index + 1) % len(self.playlist)
-            self.is_playing = False
-            self.load_track()
-            self.toggle_play()
-            return self.current_track
-        
+    def next_track(self):
+        """Cycles forward. Automatically checks from the queue first."""        
         if self.is_looping:
             self.stop()
             self.load_track()
@@ -107,6 +100,7 @@ class PlaybackEngine:
             # Pull the new first item off the top of the queue
             next_up = self.queue[0]
             self.playing_from_queue = True
+            self.current_index = 0
             self.is_playing = False
             self.load_track(track=next_up)
             self.toggle_play()
@@ -115,7 +109,7 @@ class PlaybackEngine:
             if self.is_shuffling:
                 while True:                    
                     random_index = random.randint(0, len(self.playlist) - 1)
-                    if random_index != self.current_index:  # Avoid repeating the same track when shuffling
+                    if random_index != self.current_index and len(self.playlist) > 1:  # Avoid repeating the same track when shuffling
                         break
                 self.current_index = random_index
             else:
@@ -136,7 +130,7 @@ class PlaybackEngine:
 
     def seek(self, position):
         """Jumps to a specific timestamp in seconds and updates offsets."""
-        if self.playlist:
+        if self.active_track:
             mixer.music.play(start=position)
             self.position_offset = position
             
