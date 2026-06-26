@@ -463,6 +463,7 @@ class MusicPlayer(ctk.CTk):
 
     def swap_rows(self, master_frame, idx1, idx2):
         """Swaps data arrays and handles non-destructive, highly optimized UI adjustments."""
+
         if master_frame == self.queue_frame:
             buttons_list = self.queue_buttons
             data_list = self.engine.queue
@@ -498,6 +499,7 @@ class MusicPlayer(ctk.CTk):
 
     def handle_row_drop(self, row_widget):
         """Locks elements down cleanly when user lets go of the mouse button."""
+        
         # Instantly restore the row's true background style
         row_widget.set_active(row_widget.is_active_song)
 
