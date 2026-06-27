@@ -28,7 +28,7 @@ class MusicPlayer(ctk.CTk):
 
         # Configure window
         self.title("Music Player")
-        self.geometry("900x550")
+        self.geometry("900x570")
         ctk.set_appearance_mode("dark")
 
         # Initialize the new Pygame-based playback engine
@@ -59,7 +59,7 @@ class MusicPlayer(ctk.CTk):
         self.left_panel = ctk.CTkFrame(self, fg_color="transparent")
         self.left_panel.place(relx=0.02, rely=0.04, relwidth=0.56, relheight=0.92)
 
-        # Visual Toggle Control (Approach A Visuals)
+        # Visual toggle between Playlist and Queue views
         self.view_toggle = ctk.CTkSegmentedButton(
             self.left_panel, 
             values=["Playlist", "Queue"], 
@@ -78,7 +78,7 @@ class MusicPlayer(ctk.CTk):
         self.playlist_frame = ctk.CTkScrollableFrame(self.left_panel, fg_color=GRAY)
         self.playlist_frame.pack(fill="both", expand=True)
 
-        # The Queue View - Hidden by default (Approach B Mechanics)
+        # The Queue View
         self.queue_frame = ctk.CTkScrollableFrame(self.left_panel, fg_color=GRAY)
 
         # Right container (Takes up 40% width, 92% height)
@@ -99,13 +99,17 @@ class MusicPlayer(ctk.CTk):
         self.artist_label = ctk.CTkLabel(self.right_frame, text="", font=("Arial", 14))
         self.artist_label.pack(pady=(2, 5))
 
+        # Play elements frame
+        self.play_elements_frame = ctk.CTkFrame(self.right_frame, fg_color="transparent")
+        self.play_elements_frame.pack(side="bottom", pady=(10, 0))
+
         # Progress slider
-        self.slider = ctk.CTkSlider(self.right_frame, from_=0, to=1000, number_of_steps=1000, command=self.slider_event)
+        self.slider = ctk.CTkSlider(self.play_elements_frame, from_=0, to=1000, number_of_steps=1000, command=self.slider_event)
         self.slider.pack(fill="x", padx=40, pady=(15, 2))
         self.slider.set(0)
 
         # Track length labels frame
-        self.time_frame = ctk.CTkFrame(self.right_frame, fg_color="transparent")
+        self.time_frame = ctk.CTkFrame(self.play_elements_frame, fg_color="transparent")
         self.time_frame.pack(fill="x", padx=40, pady=(0, 10)) # Matches the slider's horizontal span
 
         # Track length labels
@@ -120,7 +124,7 @@ class MusicPlayer(ctk.CTk):
         self.slider.bind("<ButtonRelease-1>", self.on_slider_release)
 
         # Control buttons frame
-        self.controls_frame = ctk.CTkFrame(self.right_frame, fg_color="transparent")
+        self.controls_frame = ctk.CTkFrame(self.play_elements_frame, fg_color="transparent")
         self.controls_frame.pack(pady=(10, 0))
 
         self.btn_shuffle = ctk.CTkButton(self.controls_frame, text="🔀", width=40, font=("Arial", 20), fg_color=GRAY, hover_color=LIGHT_GRAY, 
@@ -144,7 +148,7 @@ class MusicPlayer(ctk.CTk):
         self.btn_loop.grid(row=0, column=4, padx=10)
 
         # Load folder button
-        self.btn_open = ctk.CTkButton(self.right_frame, text="Open Music Folder", font=("Arial", 14), fg_color=BLUE, hover_color=HOVER_BLUE, 
+        self.btn_open = ctk.CTkButton(self.play_elements_frame, text="Open Music Folder", font=("Arial", 14), fg_color=BLUE, hover_color=HOVER_BLUE, 
                                     command=self.open_folder)
         self.btn_open.pack(pady=(10, 0))
 
@@ -403,8 +407,8 @@ class MusicPlayer(ctk.CTk):
             row = ui.TrackRow(
                 master=self.queue_frame,
                 index=index,
-                title=song["title"],
-                artist=song["artist"],
+                title=core.truncate_text(song["title"], 60),
+                artist=core.truncate_text(song["artist"], 30),
                 click_callback=self.play_selected_queue_song, # Custom callback for queue clicks
                 options_callback=self.handle_track_options,
                 drag_callback=self.handle_row_drag,
