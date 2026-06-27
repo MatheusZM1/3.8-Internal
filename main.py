@@ -101,12 +101,27 @@ class MusicPlayer(ctk.CTk):
 
         # Play elements frame
         self.play_elements_frame = ctk.CTkFrame(self.right_frame, fg_color="transparent")
-        self.play_elements_frame.pack(side="bottom", pady=(10, 0))
+        self.play_elements_frame.pack(side="bottom", fill="x", pady=(10, 0))
+
+        # Horizontal layout frame for the slider and volume Button
+        self.slider_row_frame = ctk.CTkFrame(self.play_elements_frame, fg_color="transparent")
+        self.slider_row_frame.pack(fill="x", padx=40, pady=(15, 2))
+
+        # Configure columns: column 1 (slider) stretches, columns 0 and 2 do not.
+        self.slider_row_frame.grid_columnconfigure(0, minsize=30)
+        self.slider_row_frame.grid_columnconfigure(1, weight=1)
+        self.slider_row_frame.grid_columnconfigure(2, minsize=30)
 
         # Progress slider
-        self.slider = ctk.CTkSlider(self.play_elements_frame, from_=0, to=1000, number_of_steps=1000, command=self.slider_event)
-        self.slider.pack(fill="x", padx=40, pady=(15, 2))
+        self.slider = ctk.CTkSlider(self.slider_row_frame, from_=0, to=1000, number_of_steps=1000, command=self.slider_event)
+        self.slider.grid(row=0, column=1, sticky="ew")  # sticky="ew" makes it stretch horizontally
         self.slider.set(0)
+
+        # Volume Button
+        self.volume_btn = ctk.CTkButton(self.slider_row_frame, text="🔊", width=30, font=("Arial", 20), 
+                                    fg_color="transparent", hover_color=GRAY, command=self.toggle_volume_mute)
+        # Small padx on the left of the button just so it doesn't touch the slider tip
+        self.volume_btn.grid(row=0, column=2, sticky="e", padx=(10, 0))
 
         # Track length labels frame
         self.time_frame = ctk.CTkFrame(self.play_elements_frame, fg_color="transparent")
@@ -619,6 +634,15 @@ class MusicPlayer(ctk.CTk):
                     self.current_time_label.configure(text=core.format_time(current_pos))
         
         self.after(100, self.update_slider)  # Schedule the next slider update
+
+    def toggle_volume_mute(self):
+        """Toggles the volume between muted and the last set volume."""
+        if self.engine.is_muted:
+            self.engine.unmute()
+            self.volume_btn.configure(text="🔊")
+        else:
+            self.engine.mute()
+            self.volume_btn.configure(text="🔇")
 
 # Main routine
 if __name__ == "__main__":

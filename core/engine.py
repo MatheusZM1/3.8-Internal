@@ -21,6 +21,9 @@ class PlaybackEngine:
         self.is_shuffling = False
         self.position_offset = 0.0
 
+        self.slider_volume = 1.0
+        self.is_muted = False
+
     def set_playlist(self, playlist, start_index=0):
         """Populates the engine's playlist and resets the tracking states."""
         self.playlist = playlist
@@ -161,3 +164,13 @@ class PlaybackEngine:
             return -1  # Signal to the UI loop that the track naturally finished
             
         return self.position_offset + (mixer_time / 1000.0)
+    
+    def mute(self):
+        """Mutes the audio."""
+        mixer.music.set_volume(0.0)
+        self.is_muted = True
+
+    def unmute(self):
+        """Unmutes the audio."""
+        mixer.music.set_volume(self.slider_volume)
+        self.is_muted = False
