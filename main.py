@@ -522,7 +522,7 @@ class MusicPlayer(ctk.CTk):
         # Instantly restore the row's true background style
         row_widget.set_active(row_widget.is_active_song)
 
-        # Determine which list we are referencing
+        # Determine which list is being referenced
         if row_widget.master == self.queue_frame:
             buttons_list = self.queue_buttons
         else:
@@ -536,6 +536,8 @@ class MusicPlayer(ctk.CTk):
                 break
 
     def toggle_play(self):
+        """Toggle playback."""
+
         if not self.playlist:
             return
 
@@ -546,6 +548,8 @@ class MusicPlayer(ctk.CTk):
             self.btn_play.configure(text="▶")
 
     def toggle_loop(self):
+        """Toggle playback loop."""
+
         if not self.engine.current_track:
             return
 
@@ -556,6 +560,8 @@ class MusicPlayer(ctk.CTk):
             self.btn_loop.configure(fg_color=GRAY, hover_color=LIGHT_GRAY)
 
     def toggle_shuffle(self):
+        """Toggle playback shuffle."""
+
         if not self.playlist:
             return
 
@@ -566,6 +572,8 @@ class MusicPlayer(ctk.CTk):
             self.btn_shuffle.configure(fg_color=GRAY, hover_color=LIGHT_GRAY)
 
     def next_song(self):
+        """Call the next song."""
+
         originally_in_queue = self.engine.playing_from_queue
 
         if self.playlist or self.engine.queue:
@@ -583,6 +591,8 @@ class MusicPlayer(ctk.CTk):
             self.update_queue_ui()
 
     def prev_song(self):
+        """Call the previous song."""
+
         if self.playlist:
             self.engine.prev_track()
             self.current_index = self.engine.current_index
