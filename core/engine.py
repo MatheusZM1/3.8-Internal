@@ -174,3 +174,12 @@ class PlaybackEngine:
         """Unmutes the audio."""
         mixer.music.set_volume(self.slider_volume)
         self.is_muted = False
+
+    def set_volume(self, volume):
+        """Sets the volume level. Expects a float between 0.0 and 1.0."""
+        self.slider_volume = volume
+        mixer.music.set_volume(volume)
+
+    def get_volume(self):
+        """Returns the current volume level as a float between 0.0 and 1.0."""
+        return self.slider_volume

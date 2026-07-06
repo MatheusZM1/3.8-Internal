@@ -52,6 +52,11 @@ class MusicPlayer(ctk.CTk):
         self.setup_ui()
         self.load_saved_folder()
 
+        self.bind("<Configure>", self.on_window_configure)
+
+    def on_window_configure(self, event=None):
+        self.update_scrollbar_visibility(self.playlist_frame if not self.queue_view_active else self.queue_frame)
+
     def setup_ui(self):
         """Set up the app UI."""
 
@@ -117,15 +122,51 @@ class MusicPlayer(ctk.CTk):
         self.slider.grid(row=0, column=1, sticky="ew")  # sticky="ew" makes it stretch horizontally
         self.slider.set(0)
 
+        # Options button
+        self.options_btn = ctk.CTkButton(self.slider_row_frame, text="⋮", width=30, font=("Arial", 20), 
+                                    fg_color="transparent", hover_color=GRAY, command=self.open_options_menu)
+        self.options_btn.grid(row=0, column=0, sticky="w", padx=(0, 10))
+
+        self.volume_anchor = ctk.CTkFrame(self.slider_row_frame, fg_color="transparent")
+        self.volume_anchor.grid(row=0, column=2, sticky="e", padx=(10, 0))
+
         # Volume Button
-        self.volume_btn = ctk.CTkButton(self.slider_row_frame, text="🔊", width=30, font=("Arial", 20), 
+        self.volume_btn = ctk.CTkButton(self.volume_anchor, text="🔊", width=30, font=("Arial", 18), 
                                     fg_color="transparent", hover_color=GRAY, command=self.toggle_volume_mute)
         # Small padx on the left of the button just so it doesn't touch the slider tip
-        self.volume_btn.grid(row=0, column=2, sticky="e", padx=(10, 0))
+        self.volume_btn.pack()
+
+        # Volume slider popup
+        self.volume_popup = ctk.CTkToplevel(self)
+        self.volume_popup.overrideredirect(True)
+        self.volume_popup.withdraw()
+        self.volume_popup.configure(fg_color=DARK_GRAY)
+
+        # Volume slider
+        self.volume_slider = ctk.CTkSlider(
+            self.volume_popup,
+            from_=0,
+            to=100,
+            orientation="vertical",
+            command=self.set_volume
+        )
+        self.volume_slider.pack()
+
+        # Volume slider pop up bindings
+        self.volume_hide_job = None
+
+        self.volume_btn.bind("<Enter>", self.show_volume_popup)
+        self.volume_btn.bind("<Leave>", self.schedule_hide_volume_popup)
+
+        self.volume_popup.bind("<Enter>", self.cancel_hide_volume_popup)
+        self.volume_popup.bind("<Leave>", self.schedule_hide_volume_popup)
+
+        self.volume_slider.bind("<ButtonPress-1>", self.cancel_hide_volume_popup)
+        self.volume_slider.bind("<B1-Motion>", self.cancel_hide_volume_popup)
 
         # Track length labels frame
         self.time_frame = ctk.CTkFrame(self.play_elements_frame, fg_color="transparent")
-        self.time_frame.pack(fill="x", padx=40, pady=(0, 10)) # Matches the slider's horizontal span
+        self.time_frame.pack(fill="x", padx=70, pady=(0, 10)) # Matches the slider's horizontal span
 
         # Track length labels
         self.current_time_label = ctk.CTkLabel(self.time_frame, text="00:00", font=("Arial", 12))
@@ -144,23 +185,23 @@ class MusicPlayer(ctk.CTk):
 
         self.btn_shuffle = ctk.CTkButton(self.controls_frame, text="🔀", width=40, font=("Arial", 20), fg_color=GRAY, hover_color=LIGHT_GRAY, 
                                     command=self.toggle_shuffle)
-        self.btn_shuffle.grid(row=0, column=0, padx=10)
+        self.btn_shuffle.grid(row=0, column=0, padx=8)
 
         self.btn_prev = ctk.CTkButton(self.controls_frame, text="⏮", width=40, font=("Arial", 20), fg_color=BLUE, hover_color=HOVER_BLUE,
                                     command=self.prev_song)
-        self.btn_prev.grid(row=0, column=1, padx=10)
+        self.btn_prev.grid(row=0, column=1, padx=8)
 
-        self.btn_play = ctk.CTkButton(self.controls_frame, text="▶", width=60, font=("Arial", 20), fg_color=BLUE, hover_color=HOVER_BLUE, 
+        self.btn_play = ctk.CTkButton(self.controls_frame, text="▶", width=40, font=("Arial", 20), fg_color=BLUE, hover_color=HOVER_BLUE, 
                                     command=self.toggle_play)
-        self.btn_play.grid(row=0, column=2, padx=10)
+        self.btn_play.grid(row=0, column=2, padx=8)
 
         self.btn_next = ctk.CTkButton(self.controls_frame, text="⏭", width=40, font=("Arial", 20), fg_color=BLUE, hover_color=HOVER_BLUE, 
                                     command=self.next_song)
-        self.btn_next.grid(row=0, column=3, padx=10)
+        self.btn_next.grid(row=0, column=3, padx=8)
 
         self.btn_loop = ctk.CTkButton(self.controls_frame, text="🔁", width=40, font=("Arial", 20), fg_color=GRAY, hover_color=LIGHT_GRAY, 
                                     command=self.toggle_loop)
-        self.btn_loop.grid(row=0, column=4, padx=10)
+        self.btn_loop.grid(row=0, column=4, padx=8)
 
         # Load folder button
         self.btn_open = ctk.CTkButton(self.play_elements_frame, text="Open Music Folder", font=("Arial", 14), fg_color=BLUE, hover_color=HOVER_BLUE, 
@@ -264,10 +305,12 @@ class MusicPlayer(ctk.CTk):
         if selected_view == "Playlist":
             self.queue_frame.pack_forget()
             self.playlist_frame.pack(fill="both", expand=True)
+            self.update_scrollbar_visibility(self.playlist_frame)
             self.queue_view_active = False
         elif selected_view == "Queue":
             self.playlist_frame.pack_forget()
             self.queue_frame.pack(fill="both", expand=True)
+            self.update_scrollbar_visibility(self.queue_frame)
             self.queue_view_active = True
 
     def update_ui_for_current_track(self):
@@ -341,6 +384,27 @@ class MusicPlayer(ctk.CTk):
         self.art_label.configure(image=None, text="🎵", font=("Arial", 80))
         self.album_art_frame.configure(fg_color=GRAY)
 
+    def get_visible_scroll_height(self, frame):
+        frame.update_idletasks()
+        canvas = frame._parent_canvas
+        scaling = float(self.tk.call('tk', 'scaling'))
+        return int(canvas.winfo_height() / scaling)
+
+    def update_scrollbar_visibility(self, frame):
+        frame.update_idletasks()
+
+        content_height = 52 * len(frame.winfo_children())
+        viewport_height = self.get_visible_scroll_height(frame)
+
+        needs_scroll = content_height > viewport_height
+
+        if needs_scroll:
+            frame.configure(scrollbar_button_color="#696969")
+            frame.configure(scrollbar_button_hover_color="#878787")
+        else:
+           frame.configure(scrollbar_button_color=GRAY)
+           frame.configure(scrollbar_button_hover_color=GRAY)
+
     def update_playlist_ui(self):
         """Clears the scrollable frame and redraws all track rows using the helper class."""
         # Destroy old row components to clear memory references cleanly
@@ -360,7 +424,7 @@ class MusicPlayer(ctk.CTk):
                 drag_callback=self.handle_row_drag,
                 drop_callback=self.handle_row_drop
             )
-            row.pack(fill="x", pady=2, padx=5)
+            row.pack(fill="x", padx=5, pady=2)
             self.playlist_buttons.append(row)
 
         if not self.engine.playing_from_queue: 
@@ -430,12 +494,14 @@ class MusicPlayer(ctk.CTk):
                 drop_callback=self.handle_row_drop,
                 queue_row=True
             )
-            row.pack(fill="x", pady=2, padx=5)
+            row.pack(fill="x", padx=5, pady=2)
             self.queue_buttons.append(row)
 
         if self.engine.playing_from_queue:
             print("highlight current")
             self.highlight_current_song(self.queue_buttons)
+
+        self.update_scrollbar_visibility(self.queue_frame)
 
     def play_selected_queue_song(self, index):
         """Plays a song directly from the queue."""
@@ -645,14 +711,73 @@ class MusicPlayer(ctk.CTk):
         
         self.after(100, self.update_slider)  # Schedule the next slider update
 
+    def open_options_menu(self):
+        pass
+
     def toggle_volume_mute(self):
         """Toggles the volume between muted and the last set volume."""
         if self.engine.is_muted:
             self.engine.unmute()
             self.volume_btn.configure(text="🔊")
+            self.volume_slider.set(self.engine.slider_volume * 100)  # Restore the slider to the last volume level
         else:
             self.engine.mute()
             self.volume_btn.configure(text="🔇")
+            self.volume_slider.set(0)  # Set the slider to 0 when muted
+
+    def show_volume_popup(self, event=None):
+        """Shows the volume popup and positions it relative to the volume button."""
+        self.cancel_hide_volume_popup()
+
+        self.update_idletasks()
+
+        x = self.volume_anchor.winfo_rootx()
+        y = self.volume_anchor.winfo_rooty()
+
+        self.volume_popup.deiconify()
+        self.volume_popup.attributes("-topmost", True)
+
+        self.volume_popup.geometry(f"16x100+{x + 10}+{y - 120}")
+
+    def hide_volume_popup(self):
+        """Hides the volume popup and starts the fade-out effect."""
+        self.volume_hide_job = None
+        self.fade_out()
+
+    def schedule_hide_volume_popup(self, event=None):
+        """Schedules the volume popup to fade out after a short delay."""
+        self.cancel_hide_volume_popup()
+        self.volume_hide_job = self.after(300, self.hide_volume_popup)
+
+    def cancel_hide_volume_popup(self, event=None):
+        """Cancels any scheduled hide operation for the volume popup."""
+        if self.volume_hide_job is not None:
+            self.after_cancel(self.volume_hide_job)
+            self.volume_hide_job = None
+
+    def fade_out(self, step=0.08):
+        """Gradually fades out the volume popup."""
+        def _step(alpha):
+            if not self.volume_popup.winfo_exists():
+                return
+
+            alpha -= step
+            if alpha <= 0.0:
+                self.volume_popup.withdraw()
+                self.volume_popup.attributes("-alpha", 1.0)
+                return
+
+            self.volume_popup.attributes("-alpha", alpha)
+            self.after(10, lambda: _step(alpha))
+
+        _step(1.0)
+
+    def set_volume(self):
+        """Sets the volume level."""
+        volume = self.volume_slider.get()
+        self.engine.set_volume(volume / 100.0)  # Engine expects a value between 0.0 and 1.0
+        if self.engine.is_muted:
+            self.toggle_volume_mute()  # Unmute if the user adjusts the volume while muted
 
 # Main routine
 if __name__ == "__main__":
