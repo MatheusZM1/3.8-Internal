@@ -183,6 +183,7 @@ class TrackRow(ctk.CTkFrame):
             options = [
                 ("Add to queue", core.TrackActions.ADD_TO_QUEUE),
                 ("Save to a playlist", core.TrackActions.SAVE_TO_PLAYLIST),
+                ("Remove from playlist", core.TrackActions.REMOVE_FROM_PLAYLIST),
                 ("Open in folder", core.TrackActions.OPEN_IN_FOLDER)
             ]
 

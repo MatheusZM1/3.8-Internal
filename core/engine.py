@@ -28,7 +28,6 @@ class PlaybackEngine:
         """Populates the engine's playlist and resets the tracking states."""
         self.playlist = playlist
         self.current_index = start_index if playlist else 0
-        self.stop()
 
     @property
     def current_track(self):
@@ -88,10 +87,7 @@ class PlaybackEngine:
     def next_track(self):
         """Cycles forward. Automatically checks from the queue first."""        
         if self.is_looping:
-            self.stop()
-            self.load_track()
-            self.toggle_play()
-            return self.current_track
+            return self.replay_track()
 
         if self.playing_from_queue and self.queue:
             if not self.queue_head_removed:
@@ -126,9 +122,17 @@ class PlaybackEngine:
         """Cycles to the previous index and plays it."""
         if self.playlist:
             self.current_index = (self.current_index - 1) % len(self.playlist)
+            self.playing_from_queue = False
             self.is_playing = False
             self.load_track()
             self.toggle_play()
+        return self.current_track
+
+    def replay_track(self):
+        """Replays the current track."""
+        self.stop()
+        self.load_track(track=self.active_track)
+        self.toggle_play()
         return self.current_track
 
     def seek(self, position):
