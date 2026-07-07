@@ -28,8 +28,16 @@ class MusicPlayer(ctk.CTk):
 
         # Configure window
         self.title("Music Player")
-        self.geometry("900x570")
         ctk.set_appearance_mode("dark")
+
+        window_width, window_height = 900, 570
+
+        screen_width = self.winfo_screenwidth()
+        screen_height = self.winfo_screenheight()
+        x = (screen_width - window_width) // 2
+        y = (screen_height - window_height) // 2
+
+        self.geometry(f"{window_width}x{window_height}+{x}+{y}")
 
         # Initialize the new Pygame-based playback engine
         self.engine = core.PlaybackEngine()
@@ -69,7 +77,7 @@ class MusicPlayer(ctk.CTk):
             selected_color=BLUE, selected_hover_color=HOVER_BLUE, fg_color=GRAY,  unselected_color=GRAY, unselected_hover_color=LIGHT_GRAY,
             font=("Arial", 14, "bold"))
         self.view_toggle.pack(fill="x", pady=(0, 10))
-        self.view_toggle.set("Playlist")
+        self.view_toggle.set("Playlist: Untitled")
 
         # Playlist view
         self.playlist_frame = ctk.CTkScrollableFrame(self.left_panel, fg_color=GRAY)
@@ -92,9 +100,9 @@ class MusicPlayer(ctk.CTk):
                                 text="Save Playlist", font=("Arial", 12, "bold"), fg_color=GRAY, hover_color=LIGHT_GRAY)
         self.save_playlist_button.pack(side="left", padx=(0, 5))
 
-        # Load playlist button
-        self.load_playlist_button = ctk.CTkButton(self.playlist_controls_frame, width=30, height=30, command=self.load_playlist,
-                                text="Load Playlist", font=("Arial", 12, "bold"), fg_color=GRAY, hover_color=LIGHT_GRAY)
+        # View playlists button
+        self.load_playlist_button = ctk.CTkButton(self.playlist_controls_frame, width=30, height=30, command=self.view_playlists,
+                                text="View Playlists", font=("Arial", 12, "bold"), fg_color=GRAY, hover_color=LIGHT_GRAY)
         self.load_playlist_button.pack(side="left", padx=(0, 5))
 
         # Right container (Takes up 40% width, 92% height)
@@ -250,8 +258,8 @@ class MusicPlayer(ctk.CTk):
     def save_folder_as_playlist(self):
         ui.SavePlaylistDialog(self, self.playlist)
 
-    def load_playlist(self):
-        ui.LoadPlaylistDialog(self)
+    def view_playlists(self):
+        ui.ViewPlaylistsDialog(self)
 
     def process_folder(self, folder_path):
         """Process the a folder and add all supported audio files to the playlist."""
@@ -304,18 +312,41 @@ class MusicPlayer(ctk.CTk):
         # Check if playlist is not empty and respond appropriately
         if self.playlist.is_populated():
             # Synchronize track collection to engine boundary layout
+            self.engine.stop()
             self.engine.set_playlist(self.playlist.tracks)
             self.current_index = 0
+            self.engine.current_index = 0
             self.engine.load_track()
+            self.engine.toggle_play()
             self.update_ui_for_current_track()
         else:
             self.track_label.configure(text="No supported audio files found")
             self.artist_label.configure(text="")
 
         self.update_playlist_ui()
+        self.switch_view("Playlist:")
+        self.view_toggle.set(f"Playlist: {self.playlist.name}")
+
+    def process_playlist(self, playlist):
+        """Processes a loaded playlist and updates the engine and UI."""
+        if playlist and playlist.is_populated():
+            self.playlist = playlist
+            self.engine.stop()
+            self.engine.set_playlist(self.playlist.tracks)
+            self.current_index = 0
+            self.engine.current_index = 0
+            self.engine.load_track()
+            self.engine.toggle_play()
+            self.update_ui_for_current_track()
+            self.update_playlist_ui()
+        else:
+            self.track_label.configure(text="Playlist is empty or invalid")
+            self.artist_label.configure(text="")
+        self.switch_view(f"Playlist:")
+        self.view_toggle.set(f"Playlist: {self.playlist.name}")
 
     def switch_view(self, selected_view):
-        if selected_view == "Playlist":
+        if selected_view.startswith("Playlist"):
             self.queue_frame.pack_forget()
             self.playlist_frame.pack(fill="both", expand=True, before=self.playlist_controls_frame)
             self.update_scrollbar_visibility(self.playlist_frame)
@@ -425,7 +456,7 @@ class MusicPlayer(ctk.CTk):
             row.destroy()
         self.playlist_buttons.clear()
 
-        # Rebuild the list with our custom TrackRow objects
+        # Rebuild the list with TrackRow objects
         for index, song in enumerate(self.playlist.tracks):
             row = ui.TrackRow(
                 master=self.playlist_frame,
@@ -473,7 +504,7 @@ class MusicPlayer(ctk.CTk):
         for row in buttons_list:
             row.set_active(False)
 
-    def handle_track_options(self, index, action : core.TrackActions):
+    def handle_track_options(self, index : int, action : core.TrackActions):
         """Routes the contextual menu actions for each track."""        
         match action:
             case core.TrackActions.ADD_TO_QUEUE:
@@ -491,7 +522,7 @@ class MusicPlayer(ctk.CTk):
             case core.TrackActions.SAVE_TO_PLAYLIST:
                 pass
             
-            case core.TrackActions.REMOVE_FROM_PLAYLIST:
+            case core.TrackActions.REMOVE_FROM_MIX:
                 if 0 <= index < len(self.playlist.tracks):
                     self.playlist.remove_track(index)
                     self.engine.set_playlist(self.playlist.tracks)

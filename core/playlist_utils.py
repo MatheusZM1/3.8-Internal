@@ -15,6 +15,10 @@ class Playlist:
 
     def is_populated(self):
         return len(self.tracks) > 0
+    
+    @property
+    def population(self):
+        return len(self.tracks)
 
     def save(self, filepath):
         data = {
