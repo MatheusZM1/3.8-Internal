@@ -6,6 +6,7 @@ from pygame import mixer
 import mutagen
 import io
 from PIL import Image
+import random
 import core
 import ui
 
@@ -92,18 +93,23 @@ class MusicPlayer(ctk.CTk):
 
         # Open folder button
         self.open_folder_button = ctk.CTkButton(self.playlist_controls_frame, width=30, height=30, command=self.open_folder,
-                                text="Open Folder", font=("Arial", 12, "bold"), fg_color=GRAY, hover_color=LIGHT_GRAY)
+                                text="Open Folder", font=("Arial", 12, "bold"), fg_color=BLUE, hover_color=HOVER_BLUE)
         self.open_folder_button.pack(side="left", padx=(0, 5))
 
         # Save playlist button
         self.save_playlist_button = ctk.CTkButton(self.playlist_controls_frame, width=30, height=30, command=self.save_folder_as_playlist,
-                                text="Save Playlist", font=("Arial", 12, "bold"), fg_color=GRAY, hover_color=LIGHT_GRAY)
+                                text="Save Playlist", font=("Arial", 12, "bold"), fg_color=BLUE, hover_color=HOVER_BLUE)
         self.save_playlist_button.pack(side="left", padx=(0, 5))
 
         # View playlists button
         self.load_playlist_button = ctk.CTkButton(self.playlist_controls_frame, width=30, height=30, command=self.view_playlists,
-                                text="View Playlists", font=("Arial", 12, "bold"), fg_color=GRAY, hover_color=LIGHT_GRAY)
+                                text="View Playlists", font=("Arial", 12, "bold"), fg_color=BLUE, hover_color=HOVER_BLUE)
         self.load_playlist_button.pack(side="left", padx=(0, 5))
+
+        # Shuffle playlist button
+        self.shuffle_playlist_button = ctk.CTkButton(self.playlist_controls_frame, width=30, height=30, command=self.shuffle_playlist,
+                                text="Shuffle Playlist", font=("Arial", 12, "bold"), fg_color=BLUE, hover_color=HOVER_BLUE)
+        self.shuffle_playlist_button.pack(side="left", padx=(0, 5))
 
         # Right container (Takes up 40% width, 92% height)
         self.right_frame = ctk.CTkFrame(self, fg_color="transparent")
@@ -261,6 +267,24 @@ class MusicPlayer(ctk.CTk):
     def view_playlists(self):
         ui.ViewPlaylistsDialog(self)
 
+    def shuffle_playlist(self):
+        random.shuffle(self.playlist.tracks)
+
+        # Check if playlist is not empty and respond appropriately
+        if self.playlist.is_populated():
+            # Synchronize track collection to engine boundary layout
+            self.engine.stop()
+            self.engine.set_playlist(self.playlist.tracks)
+            self.current_index = 0
+            self.engine.current_index = 0
+            self.engine.load_track()
+            self.engine.toggle_play()
+            self.update_ui_for_current_track()
+
+        self.update_playlist_ui()
+        self.switch_view("Playlist:")
+        self.view_toggle.set(f"Playlist: {self.playlist.name}")
+
     def process_folder(self, folder_path):
         """Process the a folder and add all supported audio files to the playlist."""
         self.playlist = core.Playlist()
@@ -372,8 +396,7 @@ class MusicPlayer(ctk.CTk):
                 self.slider.set(0)
 
             # Extract visual metadata assets
-            audio = mutagen.File(song["path"])
-            self.set_album_art(audio)
+            self.set_album_art(song)
             self.highlight_current_song(self.queue_buttons if self.engine.playing_from_queue else self.playlist_buttons)
 
             # Synchronize presentation toggle characters
@@ -382,38 +405,14 @@ class MusicPlayer(ctk.CTk):
             else:
                 self.btn_play.configure(text="▶")
 
-    def set_album_art(self, audio):
+    def set_album_art(self, song):
         """Extracts cover art from audio metadata and updates the UI."""
-        img_data = None
+        image = core.load_album_art(song["path"], (250, 250))
 
-        if audio is not None:
-            # Check for MP3 ID3 tags (APIC)
-            if hasattr(audio, "tags") and audio.tags:
-                if "APIC:" in audio.tags:
-                    img_data = audio.tags["APIC:"].data
-                else:
-                    for key in audio.tags.keys():
-                        if "APIC" in key:
-                            img_data = audio.tags[key].data
-                            break
-            
-            # Check for FLAC / OGG / WAV Vorbis Comments
-            if not img_data and hasattr(audio, "pictures") and audio.pictures:
-                img_data = audio.pictures[0].data
-
-        if img_data:
-            try:
-                # Convert raw bytes into a PIL Image
-                pil_image = Image.open(io.BytesIO(img_data))
-                ctk_image = ctk.CTkImage(light_image=pil_image, dark_image=pil_image, size=(250, 250))
-                
-                # Apply the new image
-                self.art_label.configure(image=ctk_image, text="")
-                self.art_label.image = ctk_image  # Keep reference
-                self.album_art_frame.configure(fg_color="transparent")  # Remove background frame color
-            except Exception as e:
-                print(f"Error rendering album art: {e}")
-                self.set_default_art()
+        if image:
+            self.art_label.configure(image=image, text="")
+            self.art_label.image = image
+            self.album_art_frame.configure(fg_color="transparent")
         else:
             self.set_default_art()
 
@@ -520,7 +519,7 @@ class MusicPlayer(ctk.CTk):
                         self.engine.queue_head_removed = True
 
             case core.TrackActions.SAVE_TO_PLAYLIST:
-                pass
+                ui.ViewPlaylistsDialog(self, self.playlist.tracks[index])
             
             case core.TrackActions.REMOVE_FROM_MIX:
                 if 0 <= index < len(self.playlist.tracks):

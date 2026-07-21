@@ -1,4 +1,5 @@
 import customtkinter as ctk
+import os
 import core
 
 CONFIG_FILE = "config.json"
@@ -238,7 +239,7 @@ class TrackRow(ctk.CTkFrame):
         self.options_callback(self.index, action)
 
 class PlaylistRow(ctk.CTkFrame):
-    def __init__(self, master, index, name, tracks_num, click_callback, options_callback):
+    def __init__(self, master, index, playlist : core.Playlist, click_callback, options_callback, track_add_mode=False):
         super().__init__(
             master,
             fg_color="transparent",
@@ -248,15 +249,21 @@ class PlaylistRow(ctk.CTkFrame):
         self.pack_propagate(False)
 
         self.index = index
-        self.name = name
+        self.playlist = playlist
+        self.name = playlist.name
 
         self.click_callback = click_callback
         self.options_callback = options_callback
 
+        self.track_add_mode = track_add_mode
         self.is_selected = False
+        self.is_hovered = False
 
+        display_text = f"{self.name} - {playlist.population} tracks".strip()
 
-        display_text = f"{name} - {tracks_num} tracks".strip()
+        # Playlist art
+        self.album_art_label = ctk.CTkLabel(self, text="🎵", width=40, height=40)
+        self.album_art_label.pack(side="left", padx=(5, 0))
 
         # Setup the text label
         self.label = ctk.CTkLabel(self, text=display_text, font=("Arial", 13),
@@ -275,9 +282,26 @@ class PlaylistRow(ctk.CTkFrame):
             widget.bind("<Leave>", self.on_leave)
             widget.bind("<Button-1>", self.on_click)
             widget.bind("<Button-3>", self.show_options_menu)
-
+        
         self.btn_options.bind("<Enter>", self.on_options_hover)
         self.btn_options.bind("<Leave>", self.on_options_leave)
+
+        self.set_playlist_art()
+
+    def set_playlist_art(self):
+        """Sets the playlist artwork to the album art of the first track."""
+
+        image = None
+
+        if self.playlist.art_path and os.path.exists(self.playlist.art_path):
+            image = core.load_image(self.playlist.art_path, (40, 40))
+
+        elif self.playlist.tracks:
+            image = core.load_album_art(self.playlist.tracks[0]["path"], (40, 40))
+
+        if image:
+            self.album_art_label.configure(image=image, text="")
+            self.album_art_label.image = image
 
     def on_click(self, event):
         """Call playlist selection logic."""
@@ -291,20 +315,25 @@ class PlaylistRow(ctk.CTkFrame):
             self.label.configure(text_color=WHITE)
             self.btn_options.configure(hover_color=HOVER_BLUE)
         else:
-            self.configure(fg_color="transparent")
+            if self.is_hovered:
+                self.configure(fg_color=LIGHT_GRAY)
+            else:
+                self.configure(fg_color="transparent")
+
             self.label.configure(text_color=WHITE)
             self.btn_options.configure(hover_color=DARK_GRAY)
-        
 
     def on_hover(self, event):
         """Highlight the background row when the cursor is over it."""
         if not self.is_selected:
             self.configure(fg_color=LIGHT_GRAY)
+        self.is_hovered = True
 
     def on_leave(self, event):
         """Remove background highlight when cursor moves away."""
         if not self.is_selected:
             self.configure(fg_color="transparent")
+        self.is_hovered = False
     
     def on_options_hover(self, event):
         """Change the options button color on hover."""
@@ -332,12 +361,19 @@ class PlaylistRow(ctk.CTkFrame):
         menu.configure(fg_color=DARK_GRAY, corner_radius=6)
 
         # Dropdown options
-        options = [
-                ("Load", core.PlaylistActions.LOAD),
-                ("View tracks", core.PlaylistActions.VIEW),
-                ("Rename", core.PlaylistActions.RENAME),
-                ("Delete", core.PlaylistActions.DELETE)
-            ]
+        if self.track_add_mode:
+            if self.is_selected:
+                options = [("Remove track from playlist", core.PlaylistActions.ADD_REMOVE_TRACK)]
+            else:
+                options = [("Add track to playlist", core.PlaylistActions.ADD_REMOVE_TRACK)]
+        else:
+            options = [
+                    ("Load", core.PlaylistActions.LOAD),
+                    ("View tracks", core.PlaylistActions.VIEW),
+                    ("Change cover", core.PlaylistActions.CHANGE_COVER),
+                    ("Rename", core.PlaylistActions.RENAME),
+                    ("Delete", core.PlaylistActions.DELETE)
+                ]
 
         # Pack custom buttons as rows
         for i, (label, action) in enumerate(options):
