@@ -71,7 +71,6 @@ def load_album_art(path, size):
             img_data = audio.pictures[0].data
 
         if img_data is None:
-            print("woop")
             return None
 
         image = Image.open(io.BytesIO(img_data))

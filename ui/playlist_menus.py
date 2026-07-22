@@ -457,7 +457,7 @@ class PlaylistDetailsDialog(ctk.CTkToplevel):
     def __init__(self, parent, playlist : core.Playlist):
         super().__init__(parent)
 
-        self.parent = parent
+        self.parent : ViewPlaylistsDialog = parent
         self.playlist = playlist
 
         self.title(f"Playlist: {playlist.name}")
@@ -521,7 +521,27 @@ class PlaylistDetailsDialog(ctk.CTkToplevel):
         """Routes the contextual menu actions for each track."""        
         match action:           
             case core.TrackActions.REMOVE_FROM_PLAYLIST:
-                pass
+                selected_playlist_index =  self.parent.selected_playlist_indices[0]
+
+                playlist_dir = "playlists"
+                playlist_files = [f for f in os.listdir(playlist_dir) if f.endswith(".json")]
+
+                filepath = os.path.join(playlist_dir, playlist_files[selected_playlist_index])
+                playlist = core.Playlist.load(filepath)
+
+                if not playlist:
+                    return
+
+                track_to_remove = playlist.tracks[index]
+
+                playlist.tracks = [
+                    track
+                    for track in playlist.tracks
+                    if track["path"] != track_to_remove["path"]
+                ]
+                playlist.save(filepath)
+                self.playlist = playlist
+                self.setup_playlist_view()
             
             case core.TrackActions.OPEN_IN_FOLDER:
                 import subprocess
