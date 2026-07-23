@@ -1,0 +1,18 @@
+{
+    "name": "name",
+    "art_path": null,
+    "tracks": [
+        {
+            "title": "Chicago",
+            "artist": "Michael Jackson",
+            "path": "D:/Music - Copy (2)\\Michael Jackson - Chicago (Official Audio).mp3",
+            "length": 247.51020408163265
+        },
+        {
+            "title": "Smooth Criminal",
+            "artist": "Michael Jackson",
+            "path": "D:/Music - Copy (2)\\Smooth Criminal (Radio Edit).mp3",
+            "length": 257.12326530612245
+        }
+    ]
+}

@@ -434,6 +434,9 @@ class MusicPlayer(ctk.CTk):
         return int(canvas.winfo_height() / scaling)
 
     def update_scrollbar_visibility(self, frame):
+        if not frame.winfo_exists():
+            return
+
         frame.update_idletasks()
 
         content_height = 52 * len(frame.winfo_children())
