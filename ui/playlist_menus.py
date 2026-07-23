@@ -204,6 +204,17 @@ class ViewPlaylistsDialog(ctk.CTkToplevel):
         if self.track_add_mode:
             self.check_playlist_tracks()
 
+    def refresh_single_playlist(self, playlist_filepath, playlist_index):
+        """Reloads and updates a single PlaylistRow by its file path."""
+        updated_playlist = core.Playlist.load(playlist_filepath)
+        if not updated_playlist:
+            return
+
+        self.playlists_frame.winfo_children()[playlist_index].update_playlist_data(updated_playlist)
+
+        if self.track_add_mode:
+            self.check_playlist_tracks()
+
     def on_playlist_selected(self, index):
         """Handles the logic when a playlist is selected from the view."""
         if self.track_add_mode:
@@ -542,6 +553,7 @@ class PlaylistDetailsDialog(ctk.CTkToplevel):
                 playlist.save(filepath)
                 self.playlist = playlist
                 self.setup_playlist_view()
+                self.parent.refresh_single_playlist(filepath, selected_playlist_index)
             
             case core.TrackActions.OPEN_IN_FOLDER:
                 import subprocess

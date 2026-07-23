@@ -303,6 +303,18 @@ class PlaylistRow(ctk.CTkFrame):
             self.album_art_label.configure(image=image, text="")
             self.album_art_label.image = image
 
+    def update_playlist_data(self, updated_playlist: core.Playlist):
+        """Updates internal playlist reference and refreshes label and artwork UI components."""
+        self.playlist = updated_playlist
+        self.name = updated_playlist.name
+
+        # Update text label (name + track Count)
+        display_text = f"{self.name} - {self.playlist.population} tracks".strip()
+        self.label.configure(text=display_text)
+
+        # Update artwork (in case adding/removing tracks changed the first track cover)
+        self.set_playlist_art()
+
     def on_click(self, event):
         """Call playlist selection logic."""
         self.click_callback(self.index)
