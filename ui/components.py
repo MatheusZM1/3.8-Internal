@@ -13,7 +13,7 @@ BLUE = "#1a6faf"
 HOVER_BLUE = "#145a86"
 
 class TrackRow(ctk.CTkFrame):
-    def __init__(self, master, index, title, artist, click_callback, options_callback, drag_callback=None, drop_callback=None, queue_row=False, view_only=False):
+    def __init__(self, master, index, title, artist, row_type : core.TrackRowType, click_callback, options_callback, drag_callback=None, drop_callback=None):
         super().__init__(
             master,
             fg_color="transparent",
@@ -23,6 +23,7 @@ class TrackRow(ctk.CTkFrame):
         self.pack_propagate(False)
         
         self.index = index
+        self.row_type : core.TrackRowType = row_type
 
         self.click_callback = click_callback
         self.options_callback = options_callback
@@ -30,10 +31,8 @@ class TrackRow(ctk.CTkFrame):
         self.drop_callback = drop_callback
 
         self.is_active_song = False
-        self.queue_row = queue_row
-        self.drag_triggered = False
 
-        self.view_only = view_only
+        self.drag_triggered = False
 
         self.index_label = ctk.CTkLabel(self, text=f"{index + 1}", font=("Arial", 13), text_color=VERY_LIGHT_GRAY, width=20, anchor="w")
         self.index_label.pack(side="left", padx=(10, 0))
@@ -113,7 +112,7 @@ class TrackRow(ctk.CTkFrame):
 
     def set_active(self, is_active):
         """Changes the row's styling depending on if it's the currently playing track."""
-        if self.view_only:
+        if not self.row_type == core.TrackRowType.QUEUE:
             return
         self.is_active_song = is_active
         if is_active:
@@ -131,7 +130,7 @@ class TrackRow(ctk.CTkFrame):
         """Highlight the background row when the cursor is over it."""
         if not self.is_active_song and not self.drag_triggered:
             self.configure(fg_color=LIGHT_GRAY)
-            if not self.view_only:
+            if self.row_type == core.TrackRowType.QUEUE:
                 self.index_label.configure(text=f"▶")
 
     def on_leave(self, event):
@@ -166,24 +165,27 @@ class TrackRow(ctk.CTkFrame):
         menu.configure(fg_color=DARK_GRAY, corner_radius=6)
 
         # Dropdown options
-        if self.view_only:
-            options = [
-                ("Remove from playlist", core.TrackActions.REMOVE_FROM_PLAYLIST),
-                ("Open in folder", core.TrackActions.OPEN_IN_FOLDER)
-            ]
-        elif self.queue_row:
-            options = [
-                ("Remove from queue", core.TrackActions.REMOVE_FROM_QUEUE),
-                ("Save to a playlist", core.TrackActions.SAVE_TO_PLAYLIST),
-                ("Open in folder", core.TrackActions.OPEN_IN_FOLDER)
-            ]
-        else:
-            options = [
-                ("Add to queue", core.TrackActions.ADD_TO_QUEUE),
-                ("Save to a playlist", core.TrackActions.SAVE_TO_PLAYLIST),
-                ("Remove from mix", core.TrackActions.REMOVE_FROM_MIX),
-                ("Open in folder", core.TrackActions.OPEN_IN_FOLDER)
-            ]
+        match self.row_type:
+            case core.TrackRowType.QUEUE:
+                options = [
+                    ("Remove from queue", core.TrackActions.REMOVE_FROM_QUEUE),
+                    ("Save to a playlist", core.TrackActions.SAVE_TO_PLAYLIST),
+                    ("Open in folder", core.TrackActions.OPEN_IN_FOLDER)
+                ]
+
+            case core.TrackRowType.VIEW_ONLY:
+                options = [
+                    ("Add to queue", core.TrackActions.ADD_TO_QUEUE),
+                    ("Save to a playlist", core.TrackActions.SAVE_TO_PLAYLIST),
+                    ("Remove from playlist", core.TrackActions.REMOVE_FROM_PLAYLIST),
+                    ("Open in folder", core.TrackActions.OPEN_IN_FOLDER)
+                ]
+
+            case core.TrackRowType.PLAYLIST_EXCLUSIVE_VIEW_ONLY:
+                options = [
+                    ("Remove from playlist", core.TrackActions.REMOVE_FROM_PLAYLIST),
+                    ("Open in folder", core.TrackActions.OPEN_IN_FOLDER)
+                ]
 
         # Pack custom buttons as rows
         for i, (label, action) in enumerate(options):
@@ -380,12 +382,18 @@ class PlaylistRow(ctk.CTkFrame):
                 options = [("Add track to playlist", core.PlaylistActions.ADD_REMOVE_TRACK)]
         else:
             options = [
-                    ("Load", core.PlaylistActions.LOAD),
-                    ("View tracks", core.PlaylistActions.VIEW),
-                    ("Change cover", core.PlaylistActions.CHANGE_COVER),
-                    ("Rename", core.PlaylistActions.RENAME),
-                    ("Delete", core.PlaylistActions.DELETE)
-                ]
+                ("Load", core.PlaylistActions.LOAD),
+                ("View tracks", core.PlaylistActions.VIEW),
+                ("Change cover", core.PlaylistActions.CHANGE_COVER),
+            ]
+
+            if self.album_art_label._image is not None:
+                options.append(("Reset cover", core.PlaylistActions.RESET_COVER))
+
+            options.extend([
+                ("Rename", core.PlaylistActions.RENAME),
+                ("Delete", core.PlaylistActions.DELETE),
+            ])
 
         # Pack custom buttons as rows
         for i, (label, action) in enumerate(options):

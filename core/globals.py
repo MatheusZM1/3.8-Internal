@@ -4,6 +4,12 @@ import mutagen
 import customtkinter as ctk
 from PIL import Image
 
+class TrackRowType(Enum):
+    """Enum for track row types."""
+    QUEUE = auto()
+    VIEW_ONLY = auto()
+    PLAYLIST_EXCLUSIVE_VIEW_ONLY = auto()
+
 class TrackActions(Enum):
     """Enum for track action types."""
     ADD_TO_QUEUE = auto()
@@ -18,6 +24,7 @@ class PlaylistActions(Enum):
     LOAD = auto()
     VIEW = auto()
     CHANGE_COVER = auto()
+    RESET_COVER = auto()
     RENAME = auto()
     DELETE = auto()
     ADD_REMOVE_TRACK = auto()
@@ -81,5 +88,4 @@ def load_album_art(path, size):
         )
 
     except Exception as e:
-        print(e)
         return None

@@ -204,6 +204,9 @@ class ViewPlaylistsDialog(ctk.CTkToplevel):
         if self.track_add_mode:
             self.check_playlist_tracks()
 
+        if self.selected_playlist_indices[0] is not None:
+            self.on_playlist_selected(index)
+
     def refresh_single_playlist(self, playlist_filepath, playlist_index):
         """Reloads and updates a single PlaylistRow by its file path."""
         updated_playlist = core.Playlist.load(playlist_filepath)
@@ -245,6 +248,9 @@ class ViewPlaylistsDialog(ctk.CTkToplevel):
 
             case core.PlaylistActions.CHANGE_COVER:
                 self.change_cover_playlist()
+
+            case core.PlaylistActions.RESET_COVER:
+                self.reset_cover_playlist()
 
             case core.PlaylistActions.RENAME:
                 self.rename_playlist()
@@ -377,6 +383,24 @@ class ViewPlaylistsDialog(ctk.CTkToplevel):
         if image_path:
             loaded_playlist.art_path = image_path
             loaded_playlist.save(filepath)
+
+        self.setup_playlists_view()
+
+    def reset_cover_playlist(self):
+        "Resets the cover image of the selected playlist."
+
+        playlist_dir = "playlists"
+        playlist_files = [f for f in os.listdir(playlist_dir) if f.endswith(".json")]
+        selected_file = playlist_files[self.selected_playlist_indices[0]]
+        filepath = os.path.join(playlist_dir, selected_file)
+
+        loaded_playlist = core.Playlist.load(filepath)
+        if not loaded_playlist:
+            messagebox.showerror("Load Error", f"Failed to load playlist: {selected_file}")
+            return
+
+        loaded_playlist.art_path = None
+        loaded_playlist.save(filepath)
 
         self.setup_playlists_view()
 
@@ -519,11 +543,11 @@ class PlaylistDetailsDialog(ctk.CTkToplevel):
                 index=index,
                 title=song["title"],
                 artist=song["artist"],
+                row_type=core.TrackRowType.PLAYLIST_EXCLUSIVE_VIEW_ONLY,
                 click_callback=None,
                 options_callback=self.handle_track_options,
                 drag_callback=self.handle_row_drag,
-                drop_callback=self.handle_row_drop,
-                view_only=True
+                drop_callback=self.handle_row_drop
             )
             row.pack(fill="x", padx=5, pady=2)
             self.playlist_buttons.append(row)

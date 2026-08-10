@@ -43,8 +43,12 @@ class MusicPlayer(ctk.CTk):
         # Initialize the new Pygame-based playback engine
         self.engine = core.PlaybackEngine()
 
-        # Playlist variables
-        self.playlist = core.Playlist()
+        # Playlist
+        self.loaded_playlist = core.Playlist()
+        self.loaded_playlist_buttons = []
+
+        # Playlist queue variables
+        self.playlist_queue = core.Playlist()
         self.playlist_buttons = []
         self.current_index = 0
 
@@ -64,7 +68,7 @@ class MusicPlayer(ctk.CTk):
         self.bind("<Configure>", self.on_window_configure)
 
     def on_window_configure(self, event=None):
-        self.update_scrollbar_visibility(self.playlist_frame if not self.queue_view_active else self.queue_frame)
+        self.update_scrollbar_visibility(self.playlist_queue_frame if not self.queue_view_active else self.loaded_playlist_frame)
 
     def setup_ui(self):
         """Set up the app UI."""
@@ -80,12 +84,12 @@ class MusicPlayer(ctk.CTk):
         self.view_toggle.pack(fill="x", pady=(0, 10))
         self.view_toggle.set("Playlist: Untitled")
 
-        # Playlist view
-        self.playlist_frame = ctk.CTkScrollableFrame(self.left_panel, fg_color=GRAY)
-        self.playlist_frame.pack(fill="both", expand=True)
+        # Loaded playlist view
+        self.loaded_playlist_frame = ctk.CTkScrollableFrame(self.left_panel, fg_color=GRAY)
 
-        # The Queue View
-        self.queue_frame = ctk.CTkScrollableFrame(self.left_panel, fg_color=GRAY)
+        # Playlist queue view
+        self.playlist_queue_frame = ctk.CTkScrollableFrame(self.left_panel, fg_color=GRAY)
+        self.playlist_queue_frame.pack(fill="both", expand=True)
 
         # Playlist control buttons
         self.playlist_controls_frame = ctk.CTkFrame(self.left_panel, fg_color="transparent")
@@ -262,32 +266,33 @@ class MusicPlayer(ctk.CTk):
             self.save_folder_path(folder_path)  # Save this path for next time
 
     def save_folder_as_playlist(self):
-        ui.SavePlaylistDialog(self, self.playlist)
+        ui.SavePlaylistDialog(self, self.playlist_queue)
 
     def view_playlists(self):
         ui.ViewPlaylistsDialog(self)
 
     def shuffle_playlist(self):
-        random.shuffle(self.playlist.tracks)
+        random.shuffle(self.playlist_queue.tracks)
 
         # Check if playlist is not empty and respond appropriately
-        if self.playlist.is_populated():
+        if self.playlist_queue.is_populated():
             # Synchronize track collection to engine boundary layout
             self.engine.stop()
-            self.engine.set_playlist(self.playlist.tracks)
+            self.engine.set_playlist(self.playlist_queue.tracks)
             self.current_index = 0
             self.engine.current_index = 0
             self.engine.load_track()
             self.engine.toggle_play()
             self.update_ui_for_current_track()
 
-        self.update_playlist_ui()
-        self.switch_view("Playlist:")
-        self.view_toggle.set(f"Playlist: {self.playlist.name}")
+        self.update_playlist_queue_ui()
+        self.switch_view("Queue")
+        self.view_toggle.set("Queue")
 
     def process_folder(self, folder_path):
         """Process the a folder and add all supported audio files to the playlist."""
-        self.playlist = core.Playlist()
+        self.loaded_playlist = core.Playlist()
+        self.playlist_queue = core.Playlist()
         
         # Loop through each file in the processing folder
         for file in os.listdir(folder_path):
@@ -326,18 +331,25 @@ class MusicPlayer(ctk.CTk):
                     print(f"Error reading tags for {file}: {e}")
 
                 # Add song to playlist in a dictionary structure
-                self.playlist.add_track({
+                self.loaded_playlist.add_track({
                     "title": title, 
                     "artist": artist, 
                     "path": full_path,
                     "length": length
                 })
-        
+
+                self.playlist_queue.add_track({
+                    "title": title, 
+                    "artist": artist, 
+                    "path": full_path,
+                    "length": length
+                })
+
         # Check if playlist is not empty and respond appropriately
-        if self.playlist.is_populated():
+        if self.loaded_playlist.is_populated():
             # Synchronize track collection to engine boundary layout
             self.engine.stop()
-            self.engine.set_playlist(self.playlist.tracks)
+            self.engine.set_playlist(self.loaded_playlist.tracks)
             self.current_index = 0
             self.engine.current_index = 0
             self.engine.load_track()
@@ -347,38 +359,39 @@ class MusicPlayer(ctk.CTk):
             self.track_label.configure(text="No supported audio files found")
             self.artist_label.configure(text="")
 
-        self.update_playlist_ui()
-        self.switch_view("Playlist:")
-        self.view_toggle.set(f"Playlist: {self.playlist.name}")
+        self.update_playlist_queue_ui()
+        self.switch_view("Queue")
+        self.view_toggle.set("Queue")
 
     def process_playlist(self, playlist):
         """Processes a loaded playlist and updates the engine and UI."""
         if playlist and playlist.is_populated():
-            self.playlist = playlist
+            self.loaded_playlist = playlist
             self.engine.stop()
-            self.engine.set_playlist(self.playlist.tracks)
+            self.engine.set_playlist(self.loaded_playlist.tracks)
             self.current_index = 0
             self.engine.current_index = 0
             self.engine.load_track()
             self.engine.toggle_play()
             self.update_ui_for_current_track()
-            self.update_playlist_ui()
+            self.update_loaded_playlist_ui()
+            self.update_playlist_queue_ui()
         else:
             self.track_label.configure(text="Playlist is empty or invalid")
             self.artist_label.configure(text="")
         self.switch_view(f"Playlist:")
-        self.view_toggle.set(f"Playlist: {self.playlist.name}")
+        self.view_toggle.set(f"Playlist: {self.loaded_playlist.name}")
 
     def switch_view(self, selected_view):
-        if selected_view.startswith("Playlist"):
-            self.queue_frame.pack_forget()
-            self.playlist_frame.pack(fill="both", expand=True, before=self.playlist_controls_frame)
-            self.update_scrollbar_visibility(self.playlist_frame)
+        if selected_view == "Queue":
+            self.loaded_playlist_frame.pack_forget()
+            self.playlist_queue_frame.pack(fill="both", expand=True, before=self.playlist_controls_frame)
+            self.update_scrollbar_visibility(self.playlist_queue_frame)
             self.queue_view_active = False
-        elif selected_view == "Queue":
-            self.playlist_frame.pack_forget()
-            self.queue_frame.pack(fill="both", expand=True, before=self.playlist_controls_frame)
-            self.update_scrollbar_visibility(self.queue_frame)
+        else:
+            self.playlist_queue_frame.pack_forget()
+            self.loaded_playlist_frame.pack(fill="both", expand=True, before=self.playlist_controls_frame)
+            self.update_scrollbar_visibility(self.loaded_playlist_frame)
             self.queue_view_active = True
 
     def update_ui_for_current_track(self):
@@ -397,7 +410,7 @@ class MusicPlayer(ctk.CTk):
 
             # Extract visual metadata assets
             self.set_album_art(song)
-            self.highlight_current_song(self.queue_buttons if self.engine.playing_from_queue else self.playlist_buttons)
+            self.highlight_current_song(self.playlist_buttons)
 
             # Synchronize presentation toggle characters
             if self.engine.is_playing:
@@ -451,7 +464,7 @@ class MusicPlayer(ctk.CTk):
            frame.configure(scrollbar_button_color=GRAY)
            frame.configure(scrollbar_button_hover_color=GRAY)
 
-    def update_playlist_ui(self):
+    def update_playlist_queue_ui(self):
         """Clears the scrollable frame and redraws all track rows using the helper class."""
         # Destroy old row components to clear memory references cleanly
         for row in self.playlist_buttons:
@@ -459,12 +472,13 @@ class MusicPlayer(ctk.CTk):
         self.playlist_buttons.clear()
 
         # Rebuild the list with TrackRow objects
-        for index, song in enumerate(self.playlist.tracks):
+        for index, song in enumerate(self.playlist_queue.tracks):
             row = ui.TrackRow(
-                master=self.playlist_frame,
+                master=self.playlist_queue_frame,
                 index=index,
                 title=song["title"],
                 artist=song["artist"],
+                row_type=core.TrackRowType.QUEUE,
                 click_callback=self.play_selected_song,
                 options_callback=self.handle_track_options,
                 drag_callback=self.handle_row_drag,
@@ -476,13 +490,10 @@ class MusicPlayer(ctk.CTk):
         if not self.engine.playing_from_queue: 
             self.highlight_current_song(self.playlist_buttons)
 
-        # Refresh playlist name
-        self.view_toggle.configure(values=[f"Playlist: {self.playlist.name}", "Queue"])
-
     def set_playlist_name(self, new_name):
         """Updates the playlist name and refreshes the UI."""
-        self.playlist.name = new_name
-        self.view_toggle.configure(values=[f"Playlist: {self.playlist.name}", "Queue"])
+        self.loaded_playlist.name = new_name
+        self.view_toggle.configure(values=[f"Playlist: {self.loaded_playlist.name}", "Queue"])
 
     def play_selected_song(self, index):
         """Plays a song directly from the playlist."""
@@ -510,7 +521,8 @@ class MusicPlayer(ctk.CTk):
         """Routes the contextual menu actions for each track."""        
         match action:
             case core.TrackActions.ADD_TO_QUEUE:
-                track_to_add = self.playlist.tracks[index]
+                track_to_add = self.playlist_queue.tracks[index]
+                return # Temporary
                 self.engine.queue.append(track_to_add)
                 self.update_queue_ui()
 
@@ -522,13 +534,13 @@ class MusicPlayer(ctk.CTk):
                         self.engine.queue_head_removed = True
 
             case core.TrackActions.SAVE_TO_PLAYLIST:
-                ui.ViewPlaylistsDialog(self, self.playlist.tracks[index])
+                ui.ViewPlaylistsDialog(self, self.playlist_queue.tracks[index])
             
             case core.TrackActions.REMOVE_FROM_MIX:
-                if 0 <= index < len(self.playlist.tracks):
-                    self.playlist.remove_track(index)
-                    self.engine.set_playlist(self.playlist.tracks)
-                    self.update_playlist_ui()
+                if 0 <= index < len(self.playlist_queue.tracks):
+                    self.playlist_queue.remove_track(index)
+                    self.engine.set_playlist(self.playlist_queue.tracks)
+                    self.update_playlist_queue_ui()
 
                     if self.current_index == index:
                         self.engine.stop()
@@ -539,35 +551,60 @@ class MusicPlayer(ctk.CTk):
             
             case core.TrackActions.OPEN_IN_FOLDER:
                 import subprocess
-                track_path = self.playlist.tracks[index]["path"]
+                track_path = self.playlist_queue.tracks[index]["path"]
                 safe_path = os.path.normpath(track_path)
                 subprocess.Popen(f'explorer /select,"{safe_path}"')
 
     def update_queue_ui(self):
         """Re-renders the queue view dynamically using the original rows."""
+        return
+    
         for row in self.queue_buttons:
             row.destroy()
         self.queue_buttons.clear()
 
-        for index, song in enumerate(self.engine.queue):
+        for index, song in enumerate(self.loaded_playlist.tracks):
             row = ui.TrackRow(
-                master=self.queue_frame,
+                master=self.loaded_playlist_frame,
                 index=index,
                 title=core.truncate_text(song["title"], 60),
                 artist=core.truncate_text(song["artist"], 30),
+                row_type=core.TrackRowType.QUEUE,
                 click_callback=self.play_selected_queue_song, # Custom callback for queue clicks
                 options_callback=self.handle_track_options,
                 drag_callback=self.handle_row_drag,
-                drop_callback=self.handle_row_drop,
-                queue_row=True
+                drop_callback=self.handle_row_drop
             )
             row.pack(fill="x", padx=5, pady=2)
             self.queue_buttons.append(row)
 
-        if self.engine.playing_from_queue:
-            self.highlight_current_song(self.queue_buttons)
+        self.update_scrollbar_visibility(self.loaded_playlist_frame)
 
-        self.update_scrollbar_visibility(self.queue_frame)
+    def update_loaded_playlist_ui(self):
+        """Re-renders the loaded playlist view."""
+        for row in self.loaded_playlist_buttons:
+            row.destroy()
+        self.loaded_playlist_buttons.clear()
+
+        for index, song in enumerate(self.loaded_playlist.tracks):
+            row = ui.TrackRow(
+                master=self.loaded_playlist_frame,
+                index=index,
+                title=core.truncate_text(song["title"], 60),
+                artist=core.truncate_text(song["artist"], 30),
+                row_type=core.TrackRowType.VIEW_ONLY,
+                click_callback=None,
+                options_callback=self.handle_track_options,
+                drag_callback=self.handle_row_drag,
+                drop_callback=self.handle_row_drop
+            )
+            row.pack(fill="x", padx=5, pady=2)
+            self.loaded_playlist_buttons.append(row)
+
+        self.update_scrollbar_visibility(self.loaded_playlist_frame)
+
+        # Refresh playlist name
+        self.view_toggle.configure(values=[f"Playlist: {self.loaded_playlist.name}", "Queue"])
 
     def play_selected_queue_song(self, index):
         """Plays a song directly from the queue."""
@@ -589,7 +626,7 @@ class MusicPlayer(ctk.CTk):
     def handle_row_drag(self, row_widget, y_root):
         """Tracks mouse movement and instantly flips positions with adjacent neighbors."""
         # Determine which bucket we are sorting based on layout parent containers
-        if row_widget.master == self.queue_frame:
+        if row_widget.master == self.loaded_playlist_frame:
             buttons_list = self.queue_buttons
         else:
             buttons_list = self.playlist_buttons
@@ -615,12 +652,12 @@ class MusicPlayer(ctk.CTk):
     def swap_rows(self, master_frame, idx1, idx2):
         """Swaps data arrays and handles non-destructive, highly optimized UI adjustments."""
 
-        if master_frame == self.queue_frame:
+        if master_frame == self.loaded_playlist_frame:
             buttons_list = self.queue_buttons
             data_list = self.engine.queue
         else:
             buttons_list = self.playlist_buttons
-            data_list = self.playlist.tracks
+            data_list = self.playlist_queue.tracks
 
         # Keep a direct reference to the two widgets being altered
         moving_row = buttons_list[idx1]
@@ -655,7 +692,7 @@ class MusicPlayer(ctk.CTk):
         row_widget.set_active(row_widget.is_active_song)
 
         # Determine which list is being referenced
-        if row_widget.master == self.queue_frame:
+        if row_widget.master == self.loaded_playlist_frame:
             buttons_list = self.queue_buttons
         else:
             buttons_list = self.playlist_buttons
@@ -670,7 +707,7 @@ class MusicPlayer(ctk.CTk):
     def toggle_play(self):
         """Toggle playback."""
 
-        if not self.playlist.is_populated() and not self.engine.queue:
+        if not self.playlist_queue.is_populated() and not self.engine.queue:
             return
 
         self.engine.toggle_play()
@@ -694,7 +731,7 @@ class MusicPlayer(ctk.CTk):
     def toggle_shuffle(self):
         """Toggle playback shuffle."""
 
-        if not self.playlist.is_populated():
+        if not self.playlist_queue.is_populated():
             return
 
         self.engine.toggle_shuffle()
@@ -708,7 +745,7 @@ class MusicPlayer(ctk.CTk):
 
         originally_in_queue = self.engine.playing_from_queue
 
-        if self.playlist.is_populated() or self.engine.queue:
+        if self.playlist_queue.is_populated() or self.engine.queue:
             self.engine.next_track()
             self.current_index = self.engine.current_index
             self.update_ui_for_current_track()
@@ -719,12 +756,12 @@ class MusicPlayer(ctk.CTk):
                 elif self.engine.queue:
                     self.unhighlight_all_songs(self.queue_buttons)
 
-        self.update_queue_ui()  # Always update queue in case it changed
+        #self.update_queue_ui()  # Always update queue in case it changed
 
     def prev_song(self):
         """Call the previous song."""
 
-        if self.playlist.is_populated():
+        if self.playlist_queue.is_populated():
             if self.engine.get_current_position() <= 2.0:  # If the current track is at the beginning, go to the previous track
                 self.engine.prev_track()
                 self.current_index = self.engine.current_index

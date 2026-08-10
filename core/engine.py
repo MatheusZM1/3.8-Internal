@@ -7,8 +7,8 @@ class PlaybackEngine:
         # Initialize the audio mixer inside the engine
         mixer.init()
         
-        self.playlist = []
-        self.queue = []
+        self.playlist_queue = []
+        self.priority_queue = []
         self.current_index = 0
 
         self.active_track = None
@@ -26,7 +26,7 @@ class PlaybackEngine:
 
     def set_playlist(self, playlist, start_index=0):
         """Populates the engine's playlist and resets the tracking states."""
-        self.playlist = playlist
+        self.playlist_queue = playlist
         self.current_index = start_index if playlist else 0
 
     @property
@@ -42,8 +42,8 @@ class PlaybackEngine:
         if track is not None:
             self.active_track = track
         else:
-            if self.playlist and 0 <= self.current_index < len(self.playlist):
-                self.active_track = self.playlist[self.current_index]
+            if self.playlist_queue and 0 <= self.current_index < len(self.playlist_queue):
+                self.active_track = self.playlist_queue[self.current_index]
             else:
                 self.active_track = None
 
@@ -89,30 +89,30 @@ class PlaybackEngine:
         if self.is_looping:
             return self.replay_track()
 
-        if self.playing_from_queue and self.queue:
+        if self.playing_from_queue and self.priority_queue:
             if not self.queue_head_removed:
-                self.queue.pop(0)
+                self.priority_queue.pop(0)
             self.playing_from_queue = False
             self.queue_head_removed = False
 
-        if self.queue:
+        if self.priority_queue:
             # Pull the new first item off the top of the queue
-            next_up = self.queue[0]
+            next_up = self.priority_queue[0]
             self.playing_from_queue = True
             self.current_index = 0
             self.is_playing = False
             self.load_track(track=next_up)
             self.toggle_play()
-        elif self.playlist:
+        elif self.playlist_queue:
             # Shuffle or standard playlist progression loop
             if self.is_shuffling:
                 while True:                    
-                    random_index = random.randint(0, len(self.playlist) - 1)
-                    if random_index != self.current_index and len(self.playlist) > 1:  # Avoid repeating the same track when shuffling
+                    random_index = random.randint(0, len(self.playlist_queue) - 1)
+                    if random_index != self.current_index and len(self.playlist_queue) > 1:  # Avoid repeating the same track when shuffling
                         break
                 self.current_index = random_index
             else:
-                self.current_index = (self.current_index + 1) % len(self.playlist)
+                self.current_index = (self.current_index + 1) % len(self.playlist_queue)
             self.is_playing = False
             self.load_track()
             self.toggle_play()
@@ -120,8 +120,8 @@ class PlaybackEngine:
 
     def prev_track(self):
         """Cycles to the previous index and plays it."""
-        if self.playlist:
-            self.current_index = (self.current_index - 1) % len(self.playlist)
+        if self.playlist_queue:
+            self.current_index = (self.current_index - 1) % len(self.playlist_queue)
             self.playing_from_queue = False
             self.is_playing = False
             self.load_track()
