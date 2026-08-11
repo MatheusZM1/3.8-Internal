@@ -3,12 +3,6 @@
     "art_path": null,
     "tracks": [
         {
-            "title": "1",
-            "artist": "Unknown Artist",
-            "path": "C:/Users/mathe/Downloads/Music\\1.mp3",
-            "length": 258.7167346938775
-        },
-        {
             "title": "2",
             "artist": "Unknown Artist",
             "path": "C:/Users/mathe/Downloads/Music\\2.mp3",
@@ -30,6 +24,12 @@
             "title": "Michael Jackson - Beat It (Official Audio)",
             "artist": "Unknown Artist",
             "path": "C:/Users/mathe/Downloads/Music\\Michael Jackson - Beat It (Official Audio).mp3",
+            "length": 258.7167346938775
+        },
+        {
+            "title": "1",
+            "artist": "Unknown Artist",
+            "path": "C:/Users/mathe/Downloads/Music\\1.mp3",
             "length": 258.7167346938775
         }
     ]

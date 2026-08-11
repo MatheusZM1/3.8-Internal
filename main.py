@@ -627,7 +627,7 @@ class MusicPlayer(ctk.CTk):
         """Tracks mouse movement and instantly flips positions with adjacent neighbors."""
         # Determine which bucket we are sorting based on layout parent containers
         if row_widget.master == self.loaded_playlist_frame:
-            buttons_list = self.queue_buttons
+            buttons_list = self.loaded_playlist_buttons
         else:
             buttons_list = self.playlist_buttons
 
@@ -653,8 +653,8 @@ class MusicPlayer(ctk.CTk):
         """Swaps data arrays and handles non-destructive, highly optimized UI adjustments."""
 
         if master_frame == self.loaded_playlist_frame:
-            buttons_list = self.queue_buttons
-            data_list = self.engine.queue
+            buttons_list = self.loaded_playlist_buttons
+            data_list = self.loaded_playlist.tracks
         else:
             buttons_list = self.playlist_buttons
             data_list = self.playlist_queue.tracks
@@ -769,6 +769,7 @@ class MusicPlayer(ctk.CTk):
                 self.unhighlight_all_songs(self.queue_buttons)
             else:
                 self.engine.replay_track()
+        self.btn_play.configure(text="⏸")
 
     def on_slider_press(self, event):
         """Triggered when the user clicks down on the slider."""
