@@ -64,9 +64,12 @@ class PlaybackEngine:
                 mixer.music.unpause()
             else:
                 # Brand new playback start
-                mixer.music.play()
-                self.position_offset = 0.0
-            
+                try:
+                    mixer.music.play()
+                    self.position_offset = 0.0
+                except Exception as e:
+                    print(f"Error playing track: {e}")
+
             self.is_playing = True
             self.is_paused = False
         else:

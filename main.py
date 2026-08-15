@@ -527,11 +527,20 @@ class MusicPlayer(ctk.CTk):
                 self.update_queue_ui()
 
             case core.TrackActions.REMOVE_FROM_QUEUE:
-                if 0 <= index < len(self.engine.queue):
-                    self.engine.queue.pop(index)
-                    self.update_queue_ui()
-                    if index == 0:
-                        self.engine.queue_head_removed = True
+                if 0 <= index < len(self.playlist_queue.tracks):
+                    self.playlist_queue.remove_track(index)
+                    self.engine.set_playlist(self.playlist_queue.tracks)
+                    self.update_playlist_queue_ui()
+
+                    if self.current_index == index:
+                        self.engine.stop()
+                        self.current_index += 1
+                        if self.current_index >= len(self.playlist_queue.tracks):
+                            self.current_index = 0
+                        self.engine.current_index = 0
+                        self.engine.load_track()
+                        self.engine.toggle_play()
+                        self.update_ui_for_current_track()
 
             case core.TrackActions.SAVE_TO_PLAYLIST:
                 ui.ViewPlaylistsDialog(self, self.playlist_queue.tracks[index])

@@ -54,6 +54,10 @@ class TrackRow(ctk.CTkFrame):
             text_color=WHITE, hover_color=DARK_GRAY, font=("Arial", 12, "bold"), command=self.show_options_menu)
         self.btn_options.pack(side="right", padx=(0, 5))
 
+        # Drag label
+        self.drag_label = ctk.CTkLabel(self, text="", font=("Arial", 16), text_color=VERY_LIGHT_GRAY, width=20, anchor="e")
+        self.drag_label.pack(side="right", padx=(0, 5))
+
         # Bind mouse interactions to the row container, index and text labels
         for widget in (self, self.index_label, self.label):
             widget.bind("<Enter>", self.on_hover)
@@ -128,17 +132,30 @@ class TrackRow(ctk.CTkFrame):
 
     def on_hover(self, event):
         """Highlight the background row when the cursor is over it."""
-        if not self.is_active_song and not self.drag_triggered:
+        if self.drag_triggered:
+            return
+
+        if not self.is_active_song:
             self.configure(fg_color=LIGHT_GRAY)
-            if self.row_type == core.TrackRowType.QUEUE:
+
+        if self.row_type == core.TrackRowType.QUEUE:
+            self.drag_label.configure(text="↕")
+            
+            if not self.is_active_song:
                 self.index_label.configure(text=f"▶")
 
     def on_leave(self, event):
         """Remove background highlight when cursor moves away."""
-        if not self.is_active_song and not self.drag_triggered:
+        if self.drag_triggered:
+            return
+        
+        if not self.is_active_song:
             self.configure(fg_color="transparent")
             self.index_label.configure(text=f"{self.index + 1}")
-    
+        
+        if self.row_type == core.TrackRowType.QUEUE:
+            self.drag_label.configure(text="")
+
     def on_options_hover(self, event):
         """Change the options button color on hover."""
         if not self.is_active_song:
