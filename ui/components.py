@@ -192,6 +192,7 @@ class TrackRow(ctk.CTkFrame):
 
             case core.TrackRowType.VIEW_ONLY:
                 options = [
+                    ("Play next", core.TrackActions.PLAY_NEXT),
                     ("Add to queue", core.TrackActions.ADD_TO_QUEUE),
                     ("Save to a playlist", core.TrackActions.SAVE_TO_PLAYLIST),
                     ("Remove from playlist", core.TrackActions.REMOVE_FROM_PLAYLIST),

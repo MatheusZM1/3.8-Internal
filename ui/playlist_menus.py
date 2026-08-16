@@ -580,10 +580,8 @@ class PlaylistDetailsDialog(ctk.CTkToplevel):
                 self.parent.refresh_single_playlist(filepath, selected_playlist_index)
             
             case core.TrackActions.OPEN_IN_FOLDER:
-                import subprocess
                 track_path = self.playlist.tracks[index]["path"]
-                safe_path = os.path.normpath(track_path)
-                subprocess.Popen(f'explorer /select,"{safe_path}"')
+                core.open_in_folder(track_path)
 
     def handle_row_drag(self, row_widget, y_root):
         """Tracks mouse movement and instantly flips positions with adjacent neighbors."""

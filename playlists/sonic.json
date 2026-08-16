@@ -1,0 +1,240 @@
+{
+    "name": "sonic",
+    "art_path": null,
+    "tracks": [
+        {
+            "title": "Green Hill Zone Act 1",
+            "artist": "Tee Lopes, Masato Nakamura",
+            "path": "D:/Music\\1.06 Green Hill Zone Act 1.mp3",
+            "length": 106.76725623582766
+        },
+        {
+            "title": "Green Hill Zone Act 2",
+            "artist": "Tee Lopes, Masato Nakamura",
+            "path": "D:/Music\\1.07 Green Hill Zone Act 2.flac",
+            "length": 195.61977324263037
+        },
+        {
+            "title": "Chemical Plant Zone Act 1",
+            "artist": "Tee Lopes, Masato Nakamura",
+            "path": "D:/Music\\1.08 Chemical Plant Zone Act 1.flac",
+            "length": 125.18950113378685
+        },
+        {
+            "title": "Chemical Plant Zone Act 2",
+            "artist": "Tee Lopes, Masato Nakamura",
+            "path": "D:/Music\\1.09 Chemical Plant Zone Act 2.flac",
+            "length": 121.61725623582767
+        },
+        {
+            "title": "Lights, Camera, Action! (Studiopolis Zone Act 1)",
+            "artist": "Tee Lopes",
+            "path": "D:/Music\\1.10 Studiopolis Zone Act 1.mp3",
+            "length": 200.28333333333333
+        },
+        {
+            "title": "Prime Time (Studiopolis Zone Act 2)",
+            "artist": "Tee Lopes",
+            "path": "D:/Music\\1.11 Studiopolis Zone Act 2.flac",
+            "length": 162.1536507936508
+        },
+        {
+            "title": "Flying Battery Zone Act 1",
+            "artist": "Tee Lopes, SEGA Sound Team",
+            "path": "D:/Music\\1.12 Flying Battery Zone Act 1.flac",
+            "length": 174.84142857142857
+        },
+        {
+            "title": "Flying Battery Zone Act 2",
+            "artist": "Tee Lopes, SEGA Sound Team",
+            "path": "D:/Music\\1.13 Flying Battery Zone Act 2.flac",
+            "length": 187.23263038548754
+        },
+        {
+            "title": "Press Garden Zone - Act 1 (Tabloid Jargon)",
+            "artist": "Tee Lopes, Falk Au Yeong",
+            "path": "D:/Music\\1.14 Press Garden Zone Act 1.flac",
+            "length": 118.34657596371882
+        },
+        {
+            "title": "Blossom Haze (Press Garden Zone Act 2)",
+            "artist": "Tee Lopes",
+            "path": "D:/Music\\1.15 Press Garden Zone Act 2.flac",
+            "length": 136.43009070294784
+        },
+        {
+            "title": "Stardust Speedway Zone Act 1",
+            "artist": "Tee Lopes, Naofumi Hataya",
+            "path": "D:/Music\\1.16 Stardust Speedway Zone Act 1.flac",
+            "length": 182.71260770975056
+        },
+        {
+            "title": "Stardust Speedway Zone Act 2",
+            "artist": "Tee Lopes, Naofumi Hataya",
+            "path": "D:/Music\\1.17 Stardust Speedway Zone Act 2.flac",
+            "length": 176.33009070294784
+        },
+        {
+            "title": "Hydrocity Zone Act 1",
+            "artist": "Tee Lopes, SEGA Sound Team",
+            "path": "D:/Music\\1.18 Hydrocity Zone Act 1.flac",
+            "length": 128.63544217687075
+        },
+        {
+            "title": "Hydrocity Zone Act 2",
+            "artist": "Tee Lopes, SEGA Sound Team",
+            "path": "D:/Music\\1.19 Hydrocity Zone Act 2.flac",
+            "length": 125.6907709750567
+        },
+        {
+            "title": "Skyway Octane (Mirage Saloon Zone Act 1 ST Mix)",
+            "artist": "Tee Lopes",
+            "path": "D:/Music\\1.20 Mirage Saloon Zone Act 1.flac",
+            "length": 276.8471882086168
+        },
+        {
+            "title": "Wildstyle Pistolero (Mirage Saloon Zone Act 2 K Mix)",
+            "artist": "Tee Lopes",
+            "path": "D:/Music\\1.21 Mirage Saloon Zone Act 1 (Knuckles Mix).flac",
+            "length": 140.62671201814058
+        },
+        {
+            "title": "Rogues Gallery (Mirage Saloon Zone Act 2)",
+            "artist": "Tee Lopes",
+            "path": "D:/Music\\1.22 Mirage Saloon Zone Act 2.flac",
+            "length": 151.90936507936507
+        },
+        {
+            "title": "Oil Ocean Zone Act 1",
+            "artist": "Tee Lopes, Masato Nakamura",
+            "path": "D:/Music\\1.23 Oil Ocean Zone Act 1.flac",
+            "length": 106.30367346938776
+        },
+        {
+            "title": "Oil Ocean Zone Act 2",
+            "artist": "Tee Lopes, Masato Nakamura",
+            "path": "D:/Music\\1.24 Oil Ocean Zone Act 2.flac",
+            "length": 133.80185941043084
+        },
+        {
+            "title": "Lava Reef Zone Act 1",
+            "artist": "Tee Lopes, SEGA Sound Team",
+            "path": "D:/Music\\1.25 Lava Reef Zone Act 1.flac",
+            "length": 127.2525850340136
+        },
+        {
+            "title": "Lava Reef Zone Act 2",
+            "artist": "Tee Lopes, SEGA Sound Team",
+            "path": "D:/Music\\1.26 Lava Reef Zone Act 2.flac",
+            "length": 112.58614512471655
+        },
+        {
+            "title": "Metallic Madness Zone Act 1",
+            "artist": "Tee Lopes, Naofumi Hataya",
+            "path": "D:/Music\\1.27 Metallic Madness Zone Act 1.flac",
+            "length": 149.4453968253968
+        },
+        {
+            "title": "Metallic Madness Zone Act 2",
+            "artist": "Tee Lopes, Naofumi Hataya",
+            "path": "D:/Music\\1.28 Metallic Madness Zone Act 2.flac",
+            "length": 146.88401360544216
+        },
+        {
+            "title": "Built to Rule (Titanic Monarch Zone Act 1)",
+            "artist": "Tee Lopes",
+            "path": "D:/Music\\1.29 Titanic Monarch Zone Act 1.flac",
+            "length": 162.03052154195012
+        },
+        {
+            "title": "Steel Cortex (Titanic Monarch Zone Act 2)",
+            "artist": "Tee Lopes",
+            "path": "D:/Music\\1.30 Titanic Monarch Zone Act 2.flac",
+            "length": 188.44909297052155
+        },
+        {
+            "title": "Danger on the Dance Floor (Mid-Boss)",
+            "artist": "Tee Lopes",
+            "path": "D:/Music\\1.31 Mini Boss Theme (Danger on the Dance Floor).flac",
+            "length": 114.28439909297052
+        },
+        {
+            "title": "Ruby Delusions (Eggman Boss 1)",
+            "artist": "Tee Lopes",
+            "path": "D:/Music\\1.32 Eggman Boss.flac",
+            "length": 149.14521541950114
+        },
+        {
+            "title": "Havoc Prognosis (Eggman Boss 2)",
+            "artist": "Tee Lopes",
+            "path": "D:/Music\\1.33 Eggman Boss V2.flac",
+            "length": 96.95024943310658
+        },
+        {
+            "title": "Hi-Spec Robo Go! (Hard Boiled Heavy Boss)",
+            "artist": "Tee Lopes",
+            "path": "D:/Music\\1.34 Theme of the Hard-Boiled Heavies (Hi-Spec Robo Go!).flac",
+            "length": 115.15285714285714
+        },
+        {
+            "title": "Ruby Illusions (Final Boss)",
+            "artist": "Tee Lopes",
+            "path": "D:/Music\\1.35 Final Boss.flac",
+            "length": 164.036462585034
+        },
+        {
+            "title": "Eggman Mean Bean",
+            "artist": "Tee Lopes, Masanori Hikichi, Masayuki Nagao",
+            "path": "D:/Music\\1.36 Mean Bean Mode.flac",
+            "length": 142.17360544217686
+        },
+        {
+            "title": "Vs. Metal Sonic",
+            "artist": "Tee Lopes, Naofumi Hataya",
+            "path": "D:/Music\\1.37 Vs Metal Sonic.flac",
+            "length": 130.70639455782313
+        },
+        {
+            "title": "Egg Reverie (Egg Reverie Zone)",
+            "artist": "Tee Lopes",
+            "path": "D:/Music\\1.38 True Final Boss.flac",
+            "length": 180.6485941043084
+        },
+        {
+            "title": "Dimension Heist (UFO Special Stage)",
+            "artist": "Tee Lopes",
+            "path": "D:/Music\\1.40 Special Stage Theme (Dimension Heist).flac",
+            "length": 159.3064172335601
+        },
+        {
+            "title": "Who's the Boss? (Hard Boiled Heavies Mischief Scene)",
+            "artist": "Tee Lopes",
+            "path": "D:/Music\\1.42 Hard Boiled Heavies Mischief.flac",
+            "length": 63.48392290249433
+        },
+        {
+            "title": "Chicago",
+            "artist": "Michael Jackson",
+            "path": "D:/Music\\Michael Jackson - Chicago (Official Audio).mp3",
+            "length": 247.51020408163265
+        },
+        {
+            "title": "Smooth Criminal",
+            "artist": "Michael Jackson",
+            "path": "D:/Music\\Smooth Criminal (Radio Edit).mp3",
+            "length": 257.12326530612245
+        },
+        {
+            "title": "Dancing in the Moonlight",
+            "artist": "Toploader",
+            "path": "D:/Music\\Toploader - Dancing in the Moonlight (Lyrics).mp3",
+            "length": 231.62775510204082
+        },
+        {
+            "title": "Without Me",
+            "artist": "Eminem",
+            "path": "D:/Music\\Without Me.mp3",
+            "length": 290.06367346938777
+        }
+    ]
+}

@@ -1,5 +1,6 @@
 from enum import Enum, auto
 import io
+import os
 import mutagen
 import customtkinter as ctk
 from PIL import Image
@@ -12,10 +13,10 @@ class TrackRowType(Enum):
 
 class TrackActions(Enum):
     """Enum for track action types."""
+    PLAY_NEXT = auto()
     ADD_TO_QUEUE = auto()
     REMOVE_FROM_QUEUE = auto()
     SAVE_TO_PLAYLIST = auto()
-    REMOVE_FROM_MIX = auto()
     OPEN_IN_FOLDER = auto()
     REMOVE_FROM_PLAYLIST = auto()
 
@@ -28,6 +29,12 @@ class PlaylistActions(Enum):
     RENAME = auto()
     DELETE = auto()
     ADD_REMOVE_TRACK = auto()
+
+def open_in_folder(path):
+    """Opens the folder containing the specified file in the system's file explorer."""
+    import subprocess
+    safe_path = os.path.normpath(path)
+    subprocess.Popen(f'explorer /select,"{safe_path}"')
 
 def load_image(path, size):
     """Loads a normal image file and converts it into a CustomTkinter image."""
