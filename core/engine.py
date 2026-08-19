@@ -8,11 +8,9 @@ class PlaybackEngine:
         mixer.init()
         
         self.playlist_queue = []
-        self.priority_queue = []
         self.current_index = 0
 
         self.active_track = None
-        self.playing_from_queue = False
         self.queue_head_removed = False
 
         self.is_playing = False
@@ -92,21 +90,7 @@ class PlaybackEngine:
         if self.is_looping:
             return self.replay_track()
 
-        if self.playing_from_queue and self.priority_queue:
-            if not self.queue_head_removed:
-                self.priority_queue.pop(0)
-            self.playing_from_queue = False
-            self.queue_head_removed = False
-
-        if self.priority_queue:
-            # Pull the new first item off the top of the queue
-            next_up = self.priority_queue[0]
-            self.playing_from_queue = True
-            self.current_index = 0
-            self.is_playing = False
-            self.load_track(track=next_up)
-            self.toggle_play()
-        elif self.playlist_queue:
+        if self.playlist_queue:
             # Shuffle or standard playlist progression loop
             if self.is_shuffling:
                 while True:                    
@@ -125,7 +109,6 @@ class PlaybackEngine:
         """Cycles to the previous index and plays it."""
         if self.playlist_queue:
             self.current_index = (self.current_index - 1) % len(self.playlist_queue)
-            self.playing_from_queue = False
             self.is_playing = False
             self.load_track()
             self.toggle_play()

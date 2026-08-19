@@ -322,6 +322,9 @@ class ViewPlaylistsDialog(ctk.CTkToplevel):
                 ]
                 playlist.save(filepath)
 
+            if playlist.name == self.parent.loaded_playlist.name:
+                self.parent.update_processed_playlist(playlist)
+
         self.destroy()
 
     def load_playlist(self):
@@ -459,6 +462,8 @@ class ViewPlaylistsDialog(ctk.CTkToplevel):
             return
 
         self.setup_playlists_view()
+        if old_name == self.parent.loaded_playlist.name:
+            self.parent.update_processed_playlist(loaded_playlist)
 
     def delete_playlist(self):
         """Deletes the selected playlist after user confirmation."""
@@ -576,6 +581,7 @@ class PlaylistDetailsDialog(ctk.CTkToplevel):
                 ]
                 playlist.save(filepath)
                 self.playlist = playlist
+                
                 self.setup_playlist_view()
                 self.parent.refresh_single_playlist(filepath, selected_playlist_index)
             
@@ -647,4 +653,7 @@ class PlaylistDetailsDialog(ctk.CTkToplevel):
 
         filepath = os.path.join("playlists", f"{self.playlist.name}.json")
         self.playlist.save(filepath)
+
+        if self.playlist.name == self.parent.parent.loaded_playlist.name:
+            self.parent.parent.update_processed_playlist(self.playlist)
         self.destroy()
