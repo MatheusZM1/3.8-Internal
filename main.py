@@ -4,8 +4,6 @@ import customtkinter as ctk
 from tkinter import filedialog  
 from pygame import mixer
 import mutagen
-import io
-from PIL import Image
 import random
 import core
 import ui
@@ -797,7 +795,70 @@ class MusicPlayer(ctk.CTk):
             self.current_time_label.configure(text=core.format_time(new_pos))
 
     def open_options_menu(self):
-        pass
+            """Creates a borderless dropdown menu."""
+    
+            # Create a top-level popup window
+            menu = ctk.CTkToplevel(self)
+            menu.withdraw() # Hide it instantly while configuring layout
+            menu.overrideredirect(True) # Completely kills the OS title bar and native borders
+    
+            # Apply styling
+            menu.configure(fg_color=DARK_GRAY, corner_radius=6)
+    
+            # Dropdown options
+            options = [
+                ("Remove from queue", core.TrackActions.REMOVE_FROM_QUEUE),
+                ("Save to a playlist", core.TrackActions.SAVE_TO_PLAYLIST),
+                ("Open in folder", core.TrackActions.OPEN_IN_FOLDER)
+            ]
+    
+            # Pack custom buttons as rows
+            for i, (label, action) in enumerate(options):
+                btn = ctk.CTkButton(menu, text=label, anchor="w",
+                    fg_color="transparent", text_color=WHITE, hover_color=LIGHT_GRAY,
+                    height=30, corner_radius=4, font=("Arial", 12),
+                    command=lambda a=action: [menu.destroy(), self.handle_option(a)]
+                )
+                
+                # Determine vertical padding based on position (no padding for inner elements)
+                if i == 0:
+                    row_pady = (2, 0)
+                elif i == len(options) - 1:
+                    row_pady = (0, 2)
+                else:
+                    row_pady = 0
+                    
+                btn.pack(fill="x", padx=2, pady=row_pady)
+    
+            # Position the menu precisely right underneath the options icon button
+            x = self.options_btn.winfo_rootx()
+            y = self.options_btn.winfo_rooty() - self.options_btn.winfo_height() - len(options) * 30 + 4
+    
+            # Geometry
+            menu.geometry(f"160x{len(options) * 30 + 4}+{x}+{y}")
+            
+            # Smooth rendering and focus handling
+            menu.deiconify()
+            menu.attributes("-topmost", True)
+            
+            menu.after(10, menu.focus_set)
+    
+            def safe_close(event):
+                # Only destroy if focus shifted to a completely different window instance
+                if event.widget == menu:
+                    # Determine the widget which is focused, and if it lives in the menu, do not close yet
+                    next_focus = menu.focus_get()
+                    if next_focus and next_focus.master == menu:
+                        return
+                    
+                    # Use after_idle so any click commands on the menu buttons register before the window vanishes
+                    menu.after_idle(lambda: menu.destroy() if menu.winfo_exists() else None)
+    
+            menu.bind("<FocusOut>", safe_close)
+    
+    def handle_option(self, action : core.TrackActions):
+        """Route the clicked option's event data."""
+        self.handle_track_options(self.current_index, action)
 
     def toggle_volume_mute(self):
         """Toggles the volume between muted and the last set volume."""

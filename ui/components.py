@@ -50,9 +50,9 @@ class TrackRow(ctk.CTkFrame):
         self.label.pack(side="left", fill="both", expand=True, padx=(10, 0))
 
         # Options button
-        self.btn_options = ctk.CTkButton(self, text="•••", width=30, height=30, fg_color="transparent", 
+        self.options_btn = ctk.CTkButton(self, text="•••", width=30, height=30, fg_color="transparent", 
             text_color=WHITE, hover_color=DARK_GRAY, font=("Arial", 12, "bold"), command=self.show_options_menu)
-        self.btn_options.pack(side="right", padx=(0, 5))
+        self.options_btn.pack(side="right", padx=(0, 5))
 
         # Drag label
         self.drag_label = ctk.CTkLabel(self, text="", font=("Arial", 16), text_color=VERY_LIGHT_GRAY, width=20, anchor="e")
@@ -67,8 +67,8 @@ class TrackRow(ctk.CTkFrame):
             widget.bind("<ButtonRelease-1>", self.on_release)
             widget.bind("<Button-3>", self.show_options_menu)
 
-        self.btn_options.bind("<Enter>", self.on_options_hover)
-        self.btn_options.bind("<Leave>", self.on_options_leave)
+        self.options_btn.bind("<Enter>", self.on_options_hover)
+        self.options_btn.bind("<Leave>", self.on_options_leave)
     
     def on_press(self, event):
         self.start_y = event.y_root
@@ -123,12 +123,12 @@ class TrackRow(ctk.CTkFrame):
             self.configure(fg_color=BLUE)
             self.index_label.configure(text_color=WHITE)
             self.label.configure(text_color=WHITE)
-            self.btn_options.configure(hover_color=HOVER_BLUE)
+            self.options_btn.configure(hover_color=HOVER_BLUE)
         else:
             self.configure(fg_color="transparent")
             self.index_label.configure(text_color=VERY_LIGHT_GRAY)
             self.label.configure(text_color=WHITE)
-            self.btn_options.configure(hover_color=DARK_GRAY)
+            self.options_btn.configure(hover_color=DARK_GRAY)
 
     def on_hover(self, event):
         """Highlight the background row when the cursor is over it."""
@@ -160,13 +160,13 @@ class TrackRow(ctk.CTkFrame):
         """Change the options button color on hover."""
         if not self.is_active_song:
             self.configure(fg_color=LIGHT_GRAY)
-            self.btn_options.configure(fg_color=GRAY)
+            self.options_btn.configure(fg_color=GRAY)
         else:
-            self.btn_options.configure(fg_color=HOVER_BLUE)
+            self.options_btn.configure(fg_color=HOVER_BLUE)
 
     def on_options_leave(self, event):
         """Remove background highlight when cursor moves away."""
-        self.btn_options.configure(fg_color="transparent")
+        self.options_btn.configure(fg_color="transparent")
         if not self.is_active_song:
             self.configure(fg_color="transparent")
 
@@ -229,8 +229,8 @@ class TrackRow(ctk.CTkFrame):
             x = event.x_root - 3
             y = event.y_root
         else:
-            x = self.btn_options.winfo_rootx()
-            y = self.btn_options.winfo_rooty() + self.btn_options.winfo_height()
+            x = self.options_btn.winfo_rootx()
+            y = self.options_btn.winfo_rooty() + self.options_btn.winfo_height()
 
         # Geometry
         menu.geometry(f"160x{len(options) * 30 + 4}+{x}+{y}")
@@ -292,9 +292,9 @@ class PlaylistRow(ctk.CTkFrame):
         self.label.pack(side="left", fill="both", expand=True, padx=(10, 0))
 
         # Options button
-        self.btn_options = ctk.CTkButton(self, text="•••", width=30, height=30, fg_color="transparent", 
+        self.options_btn = ctk.CTkButton(self, text="•••", width=30, height=30, fg_color="transparent", 
             text_color=WHITE, hover_color=DARK_GRAY, font=("Arial", 12, "bold"), command=self.show_options_menu)
-        self.btn_options.pack(side="right", padx=(0, 5))
+        self.options_btn.pack(side="right", padx=(0, 5))
 
         # Bind mouse interactions to the row container, index and text labels
         for widget in (self, self.label):
@@ -303,8 +303,8 @@ class PlaylistRow(ctk.CTkFrame):
             widget.bind("<Button-1>", self.on_click)
             widget.bind("<Button-3>", self.show_options_menu)
         
-        self.btn_options.bind("<Enter>", self.on_options_hover)
-        self.btn_options.bind("<Leave>", self.on_options_leave)
+        self.options_btn.bind("<Enter>", self.on_options_hover)
+        self.options_btn.bind("<Leave>", self.on_options_leave)
 
         self.set_playlist_art()
 
@@ -345,7 +345,7 @@ class PlaylistRow(ctk.CTkFrame):
         if is_selected:
             self.configure(fg_color=BLUE)
             self.label.configure(text_color=WHITE)
-            self.btn_options.configure(hover_color=HOVER_BLUE)
+            self.options_btn.configure(hover_color=HOVER_BLUE)
         else:
             if self.is_hovered:
                 self.configure(fg_color=LIGHT_GRAY)
@@ -353,7 +353,7 @@ class PlaylistRow(ctk.CTkFrame):
                 self.configure(fg_color="transparent")
 
             self.label.configure(text_color=WHITE)
-            self.btn_options.configure(hover_color=DARK_GRAY)
+            self.options_btn.configure(hover_color=DARK_GRAY)
 
     def on_hover(self, event):
         """Highlight the background row when the cursor is over it."""
@@ -371,13 +371,13 @@ class PlaylistRow(ctk.CTkFrame):
         """Change the options button color on hover."""
         if not self.is_selected:
             self.configure(fg_color=LIGHT_GRAY)
-            self.btn_options.configure(fg_color=GRAY)
+            self.options_btn.configure(fg_color=GRAY)
         else:
-            self.btn_options.configure(fg_color=HOVER_BLUE)
+            self.options_btn.configure(fg_color=HOVER_BLUE)
 
     def on_options_leave(self, event):
         """Remove background highlight when cursor moves away."""
-        self.btn_options.configure(fg_color="transparent")
+        self.options_btn.configure(fg_color="transparent")
         if not self.is_selected:
             self.configure(fg_color="transparent")
 
@@ -437,8 +437,8 @@ class PlaylistRow(ctk.CTkFrame):
             x = event.x_root - 3
             y = event.y_root
         else:
-            x = self.btn_options.winfo_rootx()
-            y = self.btn_options.winfo_rooty() + self.btn_options.winfo_height()
+            x = self.options_btn.winfo_rootx()
+            y = self.options_btn.winfo_rooty() + self.options_btn.winfo_height()
 
         # Geometry
         menu.geometry(f"160x{len(options) * 30 + 4}+{x}+{y}")
