@@ -1,9 +1,59 @@
 from enum import Enum, auto
+import json
 import io
 import os
 import mutagen
 import customtkinter as ctk
 from PIL import Image
+
+CONFIG_FILE = "config.json"
+
+class ConfigSettings:
+    def __init__(self):
+        self.last_folder = ""
+        self.last_playlist = ""
+        self.last_open = ""
+        self.load()
+
+    def load(self):
+        """Loads configuration from JSON into class attributes."""
+        if os.path.exists(CONFIG_FILE):
+            try:
+                with open(CONFIG_FILE, "r") as f:
+                    data = json.load(f)
+                    self.last_folder = data.get("last_folder", "")
+                    self.last_playlist = data.get("last_playlist", "")
+                    self.last_open = data.get("last_open", "")
+            except Exception as e:
+                print(f"Error loading config: {e}")
+
+    def save(self):
+        """Saves current class attributes back to JSON."""
+        try:
+            with open(CONFIG_FILE, "w") as f:
+                json.dump(
+                    {
+                        "last_folder": self.last_folder,
+                        "last_playlist": self.last_playlist,
+                        "last_open": self.last_open,
+                    },
+                    f,
+                    indent=4,
+                )
+        except Exception as e:
+            print(f"Error saving config: {e}")
+
+    def set_folder(self, folder_path):
+        """Updates last_folder and saves state."""
+        self.last_folder = folder_path
+        self.last_open = "folder"
+        self.save()
+
+    def set_playlist(self, playlist_path):
+        """Updates last_playlist and saves state."""
+        self.last_playlist = playlist_path
+        self.last_open = "playlist"
+        self.save()
 
 class TrackRowType(Enum):
     """Enum for track row types."""

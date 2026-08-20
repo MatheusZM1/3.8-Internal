@@ -11,7 +11,6 @@ import ui
 # Initialize the audio mixer
 mixer.init()
 
-CONFIG_FILE = "config.json"
 WHITE = "#ffffff"
 VERY_LIGHT_GRAY = "#d9d9d9"
 LIGHT_GRAY = "#565656"
@@ -63,7 +62,9 @@ class MusicPlayer(ctk.CTk):
         self.SUPPORTED_EXTENSIONS = (".mp3", ".wav", ".ogg", ".flac")
 
         self.setup_ui()
-        self.load_saved_folder()
+
+        self.config = core.ConfigSettings()
+        self.load_last_used()
 
         # Bind events
         self.bind("<Configure>", self.on_window_configure)
@@ -124,9 +125,9 @@ class MusicPlayer(ctk.CTk):
         self.load_playlist_button.pack(side="left", padx=(0, 5))
 
         # Shuffle playlist button
-        self.shuffle_playlist_button = ctk.CTkButton(self.playlist_controls_frame, width=30, height=30, command=self.shuffle_playlist,
-                                text="Shuffle Playlist", font=("Arial", 12, "bold"), fg_color=BLUE, hover_color=HOVER_BLUE)
-        self.shuffle_playlist_button.pack(side="left", padx=(0, 5))
+        self.shuffle_queue_button = ctk.CTkButton(self.playlist_controls_frame, width=30, height=30, command=self.shuffle_queue,
+                                text="Shuffle Queue", font=("Arial", 12, "bold"), fg_color=BLUE, hover_color=HOVER_BLUE)
+        self.shuffle_queue_button.pack(side="left", padx=(0, 5))
 
         # Right container (Takes up 40% width, 92% height)
         self.right_frame = ctk.CTkFrame(self, fg_color="transparent")
@@ -249,27 +250,28 @@ class MusicPlayer(ctk.CTk):
         # Start the slider update loop
         self.update_slider()
 
-    def save_folder_path(self, folder_path):
-        """Saves the selected folder path to a JSON file."""
-        try:
-            with open(CONFIG_FILE, "w") as f:
-                json.dump({"last_folder": folder_path}, f)
-        except Exception as e:
-            print(f"Error saving config: {e}")
+    def load_last_used(self):
+        """Load the last used folder or playlist based on the saved config."""
+        # State is already loaded into self.config on instantiation
+        if self.config.last_open == "folder":
+            folder = self.config.last_folder
+            if folder and os.path.exists(folder):
+                self.process_folder(folder)
 
-    def load_saved_folder(self):
-        """Reads the JSON file and automatically scans the folder if it exists."""
-        if os.path.exists(CONFIG_FILE):
-            try:
-                with open(CONFIG_FILE, "r") as f:
-                    config = json.load(f)
-                    saved_path = config.get("last_folder", "")
-                    
-                    # Ensure the folder still exists on the system
-                    if saved_path and os.path.exists(saved_path):
-                        self.process_folder(saved_path)
-            except Exception as e:
-                print(f"Error loading config: {e}")
+        elif self.config.last_open == "playlist":
+            playlist_path = self.config.last_playlist
+            if playlist_path and os.path.exists(playlist_path):
+                playlist = core.Playlist.load(playlist_path)
+                self.process_playlist(playlist)
+
+    def save_folder_path(self, folder_path):
+        """Saves the selected folder path."""
+        self.config.set_folder(folder_path)
+
+
+    def save_playlist_path(self, playlist_path):
+        """Saves the selected playlist path."""
+        self.config.set_playlist(playlist_path)
 
     def open_folder(self):
         """Open a native directory selection dialog."""
@@ -284,7 +286,7 @@ class MusicPlayer(ctk.CTk):
     def view_playlists(self):
         ui.ViewPlaylistsDialog(self)
 
-    def shuffle_playlist(self):
+    def shuffle_queue(self):
         random.shuffle(self.playlist_queue.tracks)
 
         # Check if playlist is not empty and respond appropriately
@@ -296,11 +298,10 @@ class MusicPlayer(ctk.CTk):
             self.engine.current_index = 0
             self.engine.load_track()
             self.engine.toggle_play()
+            self.update_playlist_queue_ui()
             self.update_ui_for_current_track()
-
-        self.update_playlist_queue_ui()
-        self.switch_view("Queue")
-        self.view_toggle.set("Queue")
+            self.switch_view("Queue")
+            self.view_toggle.set("Queue")
 
     def process_folder(self, folder_path):
         """Process the a folder and add all supported audio files to the playlist."""
@@ -430,7 +431,7 @@ class MusicPlayer(ctk.CTk):
 
             # Extract visual metadata assets
             self.set_album_art(song)
-            self.highlight_current_song(self.playlist_buttons)
+            self.highlight_current_song()
 
             # Synchronize presentation toggle characters
             if self.engine.is_playing:
@@ -521,16 +522,11 @@ class MusicPlayer(ctk.CTk):
         self.engine.toggle_play()
         self.update_ui_for_current_track()
 
-    def highlight_current_song(self, buttons_list):
+    def highlight_current_song(self):
         """Loops through UI rows and updates their visual selection state."""
-        for row in buttons_list:
+        for row in self.playlist_buttons:
             is_current = (row.index == self.current_index)
             row.set_active(is_current)
-
-    def unhighlight_all_songs(self, buttons_list):
-        """Resets all rows to the unselected state."""
-        for row in buttons_list:
-            row.set_active(False)
 
     def handle_track_options(self, index : int, action : core.TrackActions):
         """Routes the contextual menu actions for each track."""        

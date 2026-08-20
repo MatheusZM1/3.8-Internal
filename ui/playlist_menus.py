@@ -341,6 +341,7 @@ class ViewPlaylistsDialog(ctk.CTkToplevel):
         loaded_playlist = core.Playlist.load(filepath)
         if loaded_playlist:
             self.parent.process_playlist(loaded_playlist)
+            self.parent.save_playlist_path(filepath)
             self.destroy()
         else:
             messagebox.showerror("Load Error", f"Failed to load playlist: {selected_file}")
