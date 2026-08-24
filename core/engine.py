@@ -67,6 +67,7 @@ class PlaybackEngine:
                     self.position_offset = 0.0
                 except Exception as e:
                     print(f"Error playing track: {e}")
+                    return
 
             self.is_playing = True
             self.is_paused = False
