@@ -340,6 +340,9 @@ class ViewPlaylistsDialog(ctk.CTkToplevel):
 
         loaded_playlist = core.Playlist.load(filepath)
         if loaded_playlist:
+            if loaded_playlist.corrupted:
+                 messagebox.showerror("Load Error", f"Failed to load playlist because it is corrupted!")
+                 return
             self.parent.process_playlist(loaded_playlist)
             self.parent.save_playlist_path(filepath)
             self.destroy()
@@ -359,10 +362,14 @@ class ViewPlaylistsDialog(ctk.CTkToplevel):
 
         loaded_playlist = core.Playlist.load(filepath)
         if loaded_playlist:
+            if loaded_playlist.corrupted:
+                messagebox.showerror("Corruption Error", f"This playlist is corrupted!\nIt cannot be viewed.")
+                return
+            
             # Open a new dialog or window to display the playlist details
             PlaylistDetailsDialog(self, loaded_playlist)
         else:
-            messagebox.showerror("Load Error", f"Failed to load playlist: {selected_file}")
+            messagebox.showerror("Load Error", f"Failed to load playlist {selected_file}\nIt cannot be viewed.")
 
     def change_cover_playlist(self):
         """Changes the cover image of the selected playlist."""
@@ -374,8 +381,11 @@ class ViewPlaylistsDialog(ctk.CTkToplevel):
 
         loaded_playlist = core.Playlist.load(filepath)
         if not loaded_playlist:
-            messagebox.showerror("Load Error", f"Failed to load playlist: {selected_file}")
+            messagebox.showerror("Load Error", f"Failed to load playlist {selected_file}\nIts cover cannot be changed.")
             return
+        if loaded_playlist.corrupted:
+                messagebox.showerror("Corruption Error", f"This playlist is corrupted!\nIts cover cannot be changed.")
+                return
 
         image_path = filedialog.askopenfilename(
             title="Select Playlist Cover Image",
@@ -400,7 +410,10 @@ class ViewPlaylistsDialog(ctk.CTkToplevel):
 
         loaded_playlist = core.Playlist.load(filepath)
         if not loaded_playlist:
-            messagebox.showerror("Load Error", f"Failed to load playlist: {selected_file}")
+            messagebox.showerror("Load Error", f"Failed to load playlist {selected_file}\nIts cover cannot be reset.")
+            return
+        if loaded_playlist.corrupted:
+            messagebox.showerror("Corruption Error", f"This playlist is corrupted!\nIts cover cannot be reset.")
             return
 
         loaded_playlist.art_path = None
@@ -421,7 +434,10 @@ class ViewPlaylistsDialog(ctk.CTkToplevel):
 
         loaded_playlist = core.Playlist.load(filepath)
         if not loaded_playlist:
-            messagebox.showerror("Load Error", f"Failed to load playlist: {selected_file}")
+            messagebox.showerror("Load Error", f"Failed to load playlist: {selected_file}\nIt cannot be renamed.")
+            return
+        if loaded_playlist.corrupted:
+            messagebox.showerror("Corruption Error", f"This playlist is corrupted!\nIt cannot be renamed.")
             return
 
         # Open the SavePlaylistDialog with the loaded playlist

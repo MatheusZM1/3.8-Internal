@@ -6,6 +6,7 @@ class Playlist:
         self.name = name
         self.art_path = None
         self.tracks = []
+        self.corrupted = False
 
     def add_track(self, track_data):
         self.tracks.append(track_data)
@@ -43,7 +44,12 @@ class Playlist:
                 data = json.load(f)
         except Exception as e:
             print(f"Error loading playlist: {e}")
-            return None
+            playlist_file_name = os.path.basename(filepath)[:-5]
+            playlist = cls(name=f"{playlist_file_name} (Playlist corrupted)")
+            playlist.art_path = None
+            playlist.tracks = []
+            playlist.corrupted = True
+            return playlist
 
         playlist = cls(name=data.get("name", "Untitled"))
         playlist.art_path = data.get("art_path", None)
