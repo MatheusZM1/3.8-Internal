@@ -1,5 +1,4 @@
 import os
-import json
 import customtkinter as ctk
 from tkinter import filedialog  
 from pygame import mixer
@@ -368,12 +367,12 @@ class MusicPlayer(ctk.CTk):
             self.engine.current_index = 0
             self.engine.load_track()
             self.engine.toggle_play()
+            self.update_playlist_queue_ui()
             self.update_ui_for_current_track()
         else:
             self.track_label.configure(text="No supported audio files found")
             self.artist_label.configure(text="")
 
-        self.update_playlist_queue_ui()
         self.switch_view("Queue")
         self.view_toggle.set("Queue")
 
