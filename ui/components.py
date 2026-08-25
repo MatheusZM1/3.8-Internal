@@ -138,9 +138,9 @@ class TrackRow(ctk.CTkFrame):
         if not self.is_active_song:
             self.configure(fg_color=LIGHT_GRAY)
 
-        if self.row_type == core.TrackRowType.QUEUE:
-            self.drag_label.configure(text="↕")
-            
+        self.drag_label.configure(text="↕")
+
+        if self.row_type == core.TrackRowType.QUEUE:            
             if not self.is_active_song:
                 self.index_label.configure(text=f"▶")
 
@@ -153,8 +153,7 @@ class TrackRow(ctk.CTkFrame):
             self.configure(fg_color="transparent")
             self.index_label.configure(text=f"{self.index + 1}")
         
-        if self.row_type == core.TrackRowType.QUEUE:
-            self.drag_label.configure(text="")
+        self.drag_label.configure(text="")
 
     def on_options_hover(self, event):
         """Change the options button color on hover."""
