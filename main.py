@@ -535,12 +535,14 @@ class MusicPlayer(ctk.CTk):
                 self.playlist_queue.tracks.insert(self.current_index + 1, track_to_add)
                 self.engine.set_playlist(self.playlist_queue.tracks)
                 self.update_playlist_queue_ui()
+                self.highlight_current_song()
 
             case core.TrackActions.ADD_TO_QUEUE:
                 track_to_add = self.loaded_playlist.tracks[index]
                 self.playlist_queue.add_track(track_to_add)
                 self.engine.set_playlist(self.playlist_queue.tracks)
                 self.update_playlist_queue_ui()
+                self.highlight_current_song()
 
             case core.TrackActions.REMOVE_FROM_QUEUE:
                 if 0 <= index < len(self.playlist_queue.tracks):

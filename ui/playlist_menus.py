@@ -66,6 +66,8 @@ class SavePlaylistDialog(ctk.CTkToplevel):
         button_text = "Save" if save else "Rename"
         ctk.CTkButton(button_frame, text=button_text, width=90, command=self.save_playlist).pack(side="left", padx=5)
         ctk.CTkButton(button_frame, text="Cancel", width=90, command=self.destroy).pack(side="left", padx=5)
+        self.bind("<Return>", lambda e: self.save_playlist())  # Save
+        self.bind("<Escape>", lambda e: self.destroy())  # Cancel
 
         # Center over parent
         self.update_idletasks()
@@ -171,6 +173,12 @@ class ViewPlaylistsDialog(ctk.CTkToplevel):
             ctk.CTkButton(button_frame, text="Load", width=90, command=self.load_playlist).pack(side="left", padx=5)
             ctk.CTkButton(button_frame, text="View", width=90, command=self.view_playlist).pack(side="left", padx=5)
         ctk.CTkButton(button_frame, text="Cancel", width=90, command=self.destroy).pack(side="left", padx=5)
+
+        if self.track_add_mode:
+            self.bind("<Return>", lambda e: self.save_playlist_edits())  # Save
+        else:
+            self.bind("<Return>", lambda e: self.load_playlist())  # Load
+        self.bind("<Escape>", lambda e: self.destroy())  # Cancel
 
         # Center over parent
         self.update_idletasks()
@@ -549,6 +557,8 @@ class PlaylistDetailsDialog(ctk.CTkToplevel):
 
         ctk.CTkButton(button_frame, text="Save", width=90, command=self.save_playlist).pack(side="left", padx=5)
         ctk.CTkButton(button_frame, text="Cancel", width=90, command=self.destroy).pack(side="left", padx=5)
+        self.bind("<Return>", lambda e: self.save_playlist())  # Save
+        self.bind("<Escape>", lambda e: self.destroy())  # Cancel
 
         # Center over parent
         self.update_idletasks()
