@@ -75,12 +75,20 @@ class SavePlaylistDialog(ctk.CTkToplevel):
 
         self.geometry(f"+{x}+{y}")
 
-        self.after(100, self.focus_name_entry)
+        # Bind to the <Map> event, but defer the focus action to the next idle step
+        self.bind("<Map>", self._on_map)
+
+    def _on_map(self, event=None):
+        self.unbind("<Map>")
+        self.after(50, self.focus_name_entry)
 
     def focus_name_entry(self):
-        self.name_entry.focus_set()
-        self.name_entry.select_range(0, "end")
-        self.name_entry.icursor("end")
+        # Target the underlying Tkinter Entry widget directly
+        internal_entry = self.name_entry._entry
+        
+        internal_entry.focus_force()
+        internal_entry.selection_range(0, "end")
+        internal_entry.icursor("end")
 
     def validate_name_entry(self, *args):
         """Validates the playlist name entry to ensure it only contains valid characters and is not too long."""
