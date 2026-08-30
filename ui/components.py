@@ -59,7 +59,7 @@ class TrackRow(ctk.CTkFrame):
         self.drag_label.pack(side="right", padx=(0, 5))
 
         # Bind mouse interactions to the row container, index and text labels
-        for widget in (self, self.index_label, self.label):
+        for widget in (self, self.index_label, self.label, self.drag_label):
             widget.bind("<Enter>", self.on_hover)
             widget.bind("<Leave>", self.on_leave)
             widget.bind("<Button-1>", self.on_press)

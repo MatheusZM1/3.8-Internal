@@ -401,6 +401,7 @@ class MusicPlayer(ctk.CTk):
             self.loaded_playlist = playlist
             self.update_loaded_playlist_ui()
             self.view_toggle.set(f"Playlist: {self.loaded_playlist.name}")
+            self.switch_view(f"Playlist:")
 
     def switch_view(self, selected_view):
         if selected_view == "Queue":
